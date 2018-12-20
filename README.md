@@ -1,8 +1,8 @@
 # RxLifeHelper
 
-# compile 'com.yan:rxlifehelper:1.0.0'
+### compile 'com.yan:rxlifehelper:1.0.0'
 
-# demo
+### demo
 
 ```
 public class MainActivity extends AppCompatActivity {
