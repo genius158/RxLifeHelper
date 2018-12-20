@@ -3,6 +3,7 @@ package com.yan.rxlifehelper;
 import android.arch.lifecycle.GenericLifecycleObserver;
 import android.arch.lifecycle.Lifecycle;
 import android.arch.lifecycle.LifecycleOwner;
+import android.content.Context;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import io.reactivex.Observable;
@@ -33,7 +34,8 @@ public class RxLifeHelper {
 
   public static <T> LifecycleTransformer<T> bindFilterTag(final String tag, boolean disposeBefore) {
     if (tag == null) {
-      return bindEmptyEvent("RxLifeHelper: parameter tag can not be null");
+      return bindErrorEvent(
+          new NullPointerException("RxLifeHelper: parameter tag can not be null"));
     }
     if (disposeBefore) {
       sendFilterTag(tag);
@@ -60,11 +62,20 @@ public class RxLifeHelper {
     return bindLifeOwnerUntilEvent(target, event);
   }
 
+  public static <T> LifecycleTransformer<T> bindUntilLifeEvent(Context target,
+      Lifecycle.Event event) {
+    if (!(target instanceof LifecycleOwner)) {
+      return bindErrorEvent(
+          new IllegalArgumentException("RxLifeHelper: target must implements LifecycleOwner"));
+    }
+    return bindLifeOwnerUntilEvent((LifecycleOwner) target, event);
+  }
+
   public static <T> LifecycleTransformer<T> bindLifeOwnerUntilEvent(
       LifecycleOwner lifecycleOwner, Lifecycle.Event event) {
     InnerLifeCycleManager lifeCycleManager = getLifeManager(lifecycleOwner);
     if (lifeCycleManager == null) {
-      return bindEmptyEvent("RxLifeHelper: target could not be null");
+      return bindErrorEvent(new NullPointerException("RxLifeHelper: target could not be null"));
     }
     return RxLifecycle.bindUntilEvent(lifeCycleManager.lifecycleSubject, event);
   }
@@ -72,10 +83,10 @@ public class RxLifeHelper {
   /**
    * 空事件流绑定
    */
-  private static <T> LifecycleTransformer<T> bindEmptyEvent(String message) {
+  private static <T> LifecycleTransformer<T> bindErrorEvent(Throwable throwable) {
     try {
-      throw new NullPointerException(message);
-    } catch (NullPointerException e) {
+      throw throwable;
+    } catch (Throwable e) {
       e.printStackTrace();
     }
 
