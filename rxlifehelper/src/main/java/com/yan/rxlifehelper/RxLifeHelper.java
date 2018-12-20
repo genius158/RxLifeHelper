@@ -29,11 +29,6 @@ public class RxLifeHelper {
 
   private static InnerLifeCycleManager getLifeManager(LifecycleOwner lifecycleOwner) {
     if (lifecycleOwner == null) {
-      try {
-        throw new Exception("RxLifeHelper: parameter could not be null");
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
       return null;
     }
     String key = lifecycleOwner.getClass().getName();
@@ -83,7 +78,8 @@ public class RxLifeHelper {
       LifecycleOwner lifecycleOwner, Lifecycle.Event event) {
     InnerLifeCycleManager lifeCycleManager = getLifeManager(lifecycleOwner);
     if (lifeCycleManager == null) {
-      return bindEmptyEvent("RxLifeHelper: target must implements LifecycleOwner");
+      return bindEmptyEvent(
+          "RxLifeHelper: target could not be null and must implements LifecycleOwner");
     }
     return RxLifecycle.bindUntilEvent(lifeCycleManager.lifecycleSubject, event);
   }
@@ -93,8 +89,8 @@ public class RxLifeHelper {
    */
   private static <T> LifecycleTransformer<T> bindEmptyEvent(String message) {
     try {
-      throw new NullPointerException(message);
-    } catch (NullPointerException e) {
+      throw new Exception(message);
+    } catch (Exception e) {
       e.printStackTrace();
     }
 
