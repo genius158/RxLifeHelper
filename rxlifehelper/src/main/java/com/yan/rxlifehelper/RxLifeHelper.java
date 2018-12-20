@@ -27,20 +27,6 @@ public class RxLifeHelper {
    */
   private static final PublishSubject<String> TAG_EVENT_SUBJECT = PublishSubject.create();
 
-  private static InnerLifeCycleManager getLifeManager(LifecycleOwner lifecycleOwner) {
-    if (lifecycleOwner == null) {
-      return null;
-    }
-    String key = lifecycleOwner.getClass().getName();
-    InnerLifeCycleManager lifeCycleManager = TAG_LIFECYCLE_MAP.get(key);
-    if (lifeCycleManager == null) {
-      lifeCycleManager = new InnerLifeCycleManager();
-      lifecycleOwner.getLifecycle().addObserver(lifeCycleManager);
-      TAG_LIFECYCLE_MAP.put(lifecycleOwner.getClass().getName(), lifeCycleManager);
-    }
-    return lifeCycleManager;
-  }
-
   public static <T> LifecycleTransformer<T> bindFilterTag(final String tag) {
     return bindFilterTag(tag, true);
   }
@@ -97,6 +83,20 @@ public class RxLifeHelper {
     Observable<Lifecycle.Event> observable = Observable.empty();
     observable.subscribe();
     return RxLifecycle.bind(observable);
+  }
+
+  private static InnerLifeCycleManager getLifeManager(LifecycleOwner lifecycleOwner) {
+    if (lifecycleOwner == null) {
+      return null;
+    }
+    String key = lifecycleOwner.getClass().getName();
+    InnerLifeCycleManager lifeCycleManager = TAG_LIFECYCLE_MAP.get(key);
+    if (lifeCycleManager == null) {
+      lifeCycleManager = new InnerLifeCycleManager();
+      lifecycleOwner.getLifecycle().addObserver(lifeCycleManager);
+      TAG_LIFECYCLE_MAP.put(lifecycleOwner.getClass().getName(), lifeCycleManager);
+    }
+    return lifeCycleManager;
   }
 
   /**
