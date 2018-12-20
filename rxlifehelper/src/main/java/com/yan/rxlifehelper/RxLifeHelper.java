@@ -5,7 +5,6 @@ import android.arch.lifecycle.Lifecycle;
 import android.arch.lifecycle.LifecycleOwner;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
-import android.util.SparseArray;
 import io.reactivex.Observable;
 import io.reactivex.functions.Predicate;
 import io.reactivex.subjects.BehaviorSubject;
@@ -13,7 +12,7 @@ import io.reactivex.subjects.PublishSubject;
 import java.util.HashMap;
 
 /**
- * 基于 rxlifehelper
+ * 基于 rxlifecycle
  *
  * 作用:1. 多次调用相同方法，可以取消上一次方法的调用（bindMethodTag）
  * 2. 生命周期绑定
@@ -22,71 +21,29 @@ import java.util.HashMap;
  */
 public class RxLifeHelper {
   private static final HashMap<String, InnerLifeCycleManager> TAG_LIFECYCLE_MAP = new HashMap<>();
-  private static final SparseArray<String> TARGET_TAG_MAP = new SparseArray<>();
 
   /**
    * 处理tag 发送事件形式的绑定处理
    */
   private static final PublishSubject<String> TAG_EVENT_SUBJECT = PublishSubject.create();
 
-  /**
-   * 绑定目标生命周期
-   *
-   * @param targetTag connect with FragmentActivity and InnerLifeCycleManager
-   */
-  public static void bind(FragmentActivity activity, String targetTag) {
-    bindLifeOwner(activity, targetTag);
-  }
-
-  public static void bind(FragmentActivity activity) {
-    bindLifeOwner(activity);
-  }
-
-  /**
-   * 绑定目标生命周期
-   */
-  public static void bind(Fragment fragment, String targetTag) {
-    bindLifeOwner(fragment, targetTag);
-  }
-
-  public static void bind(Fragment fragment) {
-    bindLifeOwner(fragment);
-  }
-
-  public static void bindLifeOwner(LifecycleOwner lifecycleOwner, String targetTag) {
-    if (getLifecycleFromTarget(lifecycleOwner) == null) {
+  private static InnerLifeCycleManager getLifeManager(LifecycleOwner lifecycleOwner) {
+    if (lifecycleOwner == null) {
       try {
-        throw new Exception("RxLifeHelper: parameter in method bind is not in correct type");
+        throw new Exception("RxLifeHelper: parameter could not be null");
       } catch (Exception e) {
         e.printStackTrace();
       }
-      return;
+      return null;
     }
-
-    if (targetTag == null) {
-      targetTag = lifecycleOwner.getClass().getSimpleName();
+    String key = lifecycleOwner.getClass().getName();
+    InnerLifeCycleManager lifeCycleManager = TAG_LIFECYCLE_MAP.get(key);
+    if (lifeCycleManager == null) {
+      lifeCycleManager = new InnerLifeCycleManager();
+      lifecycleOwner.getLifecycle().addObserver(lifeCycleManager);
+      TAG_LIFECYCLE_MAP.put(lifecycleOwner.getClass().getName(), lifeCycleManager);
     }
-
-    InnerLifeCycleManager lifeCycleManager = TAG_LIFECYCLE_MAP.get(targetTag);
-    if (lifeCycleManager != null) {
-      lifeCycleManager.clear();
-      try {
-        throw new Exception("RxLifeHelper: bind multiple in "
-            + lifecycleOwner.getClass().getName()
-            + ", anything bind before was cleared");
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    }
-
-    lifeCycleManager = new InnerLifeCycleManager(targetTag, lifecycleOwner);
-    lifecycleOwner.getLifecycle().addObserver(lifeCycleManager);
-    TAG_LIFECYCLE_MAP.put(targetTag, lifeCycleManager);
-    TARGET_TAG_MAP.put(lifecycleOwner.hashCode(), targetTag);
-  }
-
-  public static void bindLifeOwner(LifecycleOwner lifecycleOwner) {
-    bindLifeOwner(lifecycleOwner, null);
+    return lifeCycleManager;
   }
 
   public static <T> LifecycleTransformer<T> bindFilterTag(final String tag) {
@@ -112,29 +69,6 @@ public class RxLifeHelper {
     TAG_EVENT_SUBJECT.onNext(tag);
   }
 
-  /**
-   * 返回 Lifecycle 用于判断target是否可用
-   */
-  private static Lifecycle getLifecycleFromTarget(Object targetOriginal) {
-    if (targetOriginal instanceof LifecycleOwner) {
-      return ((LifecycleOwner) targetOriginal).getLifecycle();
-    }
-    return null;
-  }
-
-  /**
-   * 一定确保tag被绑定，否着执行将被取消
-   *
-   * @param targetTag 标记
-   * @param event 事件
-   * @param <T> Observable 类型
-   * @return LifecycleTransformer
-   */
-  public static <T> LifecycleTransformer<T> bindUntilLifeEvent(String targetTag,
-      Lifecycle.Event event) {
-    return innerBindUntilLifeEvent(targetTag, event);
-  }
-
   public static <T> LifecycleTransformer<T> bindUntilLifeEvent(FragmentActivity target,
       Lifecycle.Event event) {
     return bindLifeOwnerUntilEvent(target, event);
@@ -146,30 +80,11 @@ public class RxLifeHelper {
   }
 
   public static <T> LifecycleTransformer<T> bindLifeOwnerUntilEvent(
-      LifecycleOwner lifecycleOwner,
-      Lifecycle.Event event) {
-    if (getLifecycleFromTarget(lifecycleOwner) == null) {
-      return bindEmptyEvent(
-          "RxLifeHelper: parameter target in method bindUntilLifeEvent is not in correct type");
-    }
-
-    String targetTag = TARGET_TAG_MAP.get(lifecycleOwner.hashCode());
-    if (targetTag == null) {
-      return bindEmptyEvent("RxLifeHelper: check the methods that related bind is called");
-    }
-
-    return innerBindUntilLifeEvent(targetTag, event);
-  }
-
-  private static <T> LifecycleTransformer<T> innerBindUntilLifeEvent(
-      String targetTag,
-      Lifecycle.Event event) {
-
-    final InnerLifeCycleManager lifeCycleManager = TAG_LIFECYCLE_MAP.get(targetTag);
+      LifecycleOwner lifecycleOwner, Lifecycle.Event event) {
+    InnerLifeCycleManager lifeCycleManager = getLifeManager(lifecycleOwner);
     if (lifeCycleManager == null) {
-      return bindEmptyEvent("RxLifeHelper: check the methods that related bind was called");
+      return bindEmptyEvent("RxLifeHelper: target must implements LifecycleOwner");
     }
-
     return RxLifecycle.bindUntilEvent(lifeCycleManager.lifecycleSubject, event);
   }
 
@@ -197,23 +112,11 @@ public class RxLifeHelper {
      * 绑定，即会发送一次最新数据
      */
     private final BehaviorSubject<Lifecycle.Event> lifecycleSubject = BehaviorSubject.create();
-    private final String targetTag;
-    private final LifecycleOwner target;
-
-    private InnerLifeCycleManager(String targetTag, LifecycleOwner target) {
-      this.targetTag = targetTag;
-      this.target = target;
-    }
-
-    private void clear() {
-      onStateChanged(target, Lifecycle.Event.ON_DESTROY);
-    }
 
     @Override public void onStateChanged(LifecycleOwner source, Lifecycle.Event event) {
       lifecycleSubject.onNext(event);
       if (event == Lifecycle.Event.ON_DESTROY) {
-        TAG_LIFECYCLE_MAP.remove(targetTag);
-        TARGET_TAG_MAP.remove(source.hashCode());
+        TAG_LIFECYCLE_MAP.remove(source.getClass().getName());
         source.getLifecycle().removeObserver(this);
       }
     }

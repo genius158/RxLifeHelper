@@ -9,13 +9,12 @@ import io.reactivex.Observable;
 import io.reactivex.functions.Consumer;
 import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity   {
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-    RxLifeHelper.bind(this);
   }
 
   @Override protected void onResume() {
@@ -38,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
   private void getData(final String data) {
     Observable.timer(1000, TimeUnit.MILLISECONDS)
         .compose(RxLifeHelper.<Long>bindFilterTag("getData"))
+        .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this,Lifecycle.Event.ON_PAUSE))
         .subscribe(new Consumer<Long>() {
           @Override public void accept(Long aLong) throws Exception {
             Log.e("RxLifeHelper", "event " + data);
