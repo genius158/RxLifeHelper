@@ -105,7 +105,7 @@ public class RxLifeHelper {
     if (lifeCycleManager == null) {
       lifeCycleManager = new InnerLifeCycleManager();
       lifecycleOwner.getLifecycle().addObserver(lifeCycleManager);
-      TAG_LIFECYCLE_MAP.put(lifecycleOwner.getClass().getName(), lifeCycleManager);
+      TAG_LIFECYCLE_MAP.put(key, lifeCycleManager);
     }
     return lifeCycleManager;
   }
