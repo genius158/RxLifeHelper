@@ -28,5 +28,6 @@ dependencies {
   //    implementation project(':rxlifehelper')
   implementation 'io.reactivex.rxjava2:rxandroid:2.1.0'
   implementation 'io.reactivex.rxjava2:rxjava:2.2.3'
+  implementation 'com.yan:rxlifehelper:1.0.0'
   implementation project(':rxlifehelper')
 }
