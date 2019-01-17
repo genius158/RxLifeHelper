@@ -1,8 +1,9 @@
 package com.yan.rxlifehelper;
 
-import android.arch.lifecycle.GenericLifecycleObserver;
 import android.arch.lifecycle.Lifecycle;
+import android.arch.lifecycle.LifecycleObserver;
 import android.arch.lifecycle.LifecycleOwner;
+import android.arch.lifecycle.OnLifecycleEvent;
 import android.content.Context;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
@@ -103,7 +104,7 @@ public class RxLifeHelper {
     String key = lifecycleOwner.getClass().getName();
     InnerLifeCycleManager lifeCycleManager = TAG_LIFECYCLE_MAP.get(key);
     if (lifeCycleManager == null) {
-      lifeCycleManager = new InnerLifeCycleManager();
+      lifeCycleManager = new InnerLifeCycleManager(lifecycleOwner);
       lifecycleOwner.getLifecycle().addObserver(lifeCycleManager);
       TAG_LIFECYCLE_MAP.put(key, lifeCycleManager);
     }
@@ -113,11 +114,15 @@ public class RxLifeHelper {
   /**
    * 生命周期管理, 生命周期各个阶段分发
    */
-  private static class InnerLifeCycleManager implements GenericLifecycleObserver {
+  private static class InnerLifeCycleManager extends GenericLifecycleObserver {
     /**
      * 绑定，即会发送一次最新数据
      */
     private final BehaviorSubject<Lifecycle.Event> lifecycleSubject = BehaviorSubject.create();
+
+    InnerLifeCycleManager(LifecycleOwner source) {
+      super(source);
+    }
 
     @Override public void onStateChanged(LifecycleOwner source, Lifecycle.Event event) {
       lifecycleSubject.onNext(event);
@@ -126,6 +131,40 @@ public class RxLifeHelper {
         source.getLifecycle().removeObserver(this);
       }
     }
+  }
+
+  abstract static class GenericLifecycleObserver implements LifecycleObserver {
+    LifecycleOwner source;
+
+    GenericLifecycleObserver(LifecycleOwner source) {
+      this.source = source;
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE) void onCreate() {
+      onStateChanged(source, Lifecycle.Event.ON_CREATE);
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_START) void onStart() {
+      onStateChanged(source, Lifecycle.Event.ON_START);
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_RESUME) void onResume() {
+      onStateChanged(source, Lifecycle.Event.ON_RESUME);
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE) void onPause() {
+      onStateChanged(source, Lifecycle.Event.ON_PAUSE);
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_STOP) void onStop() {
+      onStateChanged(source, Lifecycle.Event.ON_STOP);
+    }
+
+    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY) void onDestroy() {
+      onStateChanged(source, Lifecycle.Event.ON_DESTROY);
+    }
+
+    abstract void onStateChanged(final LifecycleOwner source, Lifecycle.Event event);
   }
 }
 
