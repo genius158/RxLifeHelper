@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.util.Log;
 import com.yan.rxlifehelper.RxLifeHelper;
 import io.reactivex.Observable;
+import io.reactivex.Single;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import java.util.concurrent.TimeUnit;
@@ -40,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
   }
 
   private void getData(final String data) {
-    Observable.timer(1000, TimeUnit.MILLISECONDS)
+        Single.timer(1000, TimeUnit.MILLISECONDS)
         .compose(RxLifeHelper.<Long>bindFilterTag("getData"))
         .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
         .doOnDispose(new Action() {
