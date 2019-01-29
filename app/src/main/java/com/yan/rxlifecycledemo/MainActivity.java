@@ -7,13 +7,13 @@ import android.os.Bundle;
 import android.util.Log;
 import com.yan.rxlifehelper.RxLifeHelper;
 import io.reactivex.Observable;
+import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
-  @Override
-  protected void onCreate(Bundle savedInstanceState) {
+  @Override protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
   }
@@ -28,6 +28,10 @@ public class MainActivity extends AppCompatActivity {
           @Override public void accept(Long aLong) throws Exception {
             Log.e("RxLifeHelper", "interval ---------");
           }
+        }, new Consumer<Throwable>() {
+          @Override public void accept(Throwable throwable) throws Exception {
+            Log.e("getData", "accept: " + throwable);
+          }
         });
 
     // 1111111111111 将不会 被打印
@@ -39,9 +43,18 @@ public class MainActivity extends AppCompatActivity {
     Observable.timer(1000, TimeUnit.MILLISECONDS)
         .compose(RxLifeHelper.<Long>bindFilterTag("getData"))
         .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
+        .doOnDispose(new Action() {
+          @Override public void run() throws Exception {
+            Log.e("doOnDispose", "run: doOnDisposedoOnDispose");
+          }
+        })
         .subscribe(new Consumer<Long>() {
           @Override public void accept(Long aLong) throws Exception {
             Log.e("RxLifeHelper", "event " + data);
+          }
+        }, new Consumer<Throwable>() {
+          @Override public void accept(Throwable throwable) throws Exception {
+            Log.e("getData", "accept: " + throwable);
           }
         });
   }

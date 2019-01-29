@@ -42,8 +42,7 @@ public class RxLifeHelper {
       sendFilterTag(tag);
     }
     return RxLifecycle.bind(TAG_EVENT_SUBJECT.filter(new Predicate<String>() {
-      @Override
-      public boolean test(String innerTag) throws Exception {
+      @Override public boolean test(String innerTag) throws Exception {
         return tag.equals(innerTag);
       }
     }));
@@ -72,8 +71,8 @@ public class RxLifeHelper {
     return bindLifeOwnerUntilEvent((LifecycleOwner) target, event);
   }
 
-  public static <T> LifecycleTransformer<T> bindLifeOwnerUntilEvent(
-      LifecycleOwner lifecycleOwner, Lifecycle.Event event) {
+  public static <T> LifecycleTransformer<T> bindLifeOwnerUntilEvent(LifecycleOwner lifecycleOwner,
+      Lifecycle.Event event) {
     InnerLifeCycleManager lifeCycleManager = getLifeManager(lifecycleOwner);
     if (lifeCycleManager == null) {
       return bindErrorEvent(new NullPointerException("RxLifeHelper: target could not be null"));
@@ -85,16 +84,8 @@ public class RxLifeHelper {
    * 空事件流绑定
    */
   private static <T> LifecycleTransformer<T> bindErrorEvent(Throwable throwable) {
-    try {
-      throw throwable;
-    } catch (Throwable e) {
-      e.printStackTrace();
-    }
-
-    // 这里处理参数错误下，直接 subscribe 达到dispose 事件流的效果
-    Observable<Lifecycle.Event> observable = Observable.empty();
-    observable.subscribe();
-    return RxLifecycle.bind(observable);
+    // 这里处理参数错误下，直接 异常返回
+    return RxLifecycle.bind(Observable.error(throwable));
   }
 
   private static InnerLifeCycleManager getLifeManager(LifecycleOwner lifecycleOwner) {
