@@ -83,10 +83,7 @@ class RXWrapHelper {
     return new Flowable<T>() {
       @Override protected void subscribeActual(final Subscriber<? super T> subscriber) {
         upstream.subscribe(new FlowableSubscriber<T>() {
-          Subscription subscription;
-
           @Override public void onSubscribe(final Subscription s) {
-            subscription = s;
             subscriber.onSubscribe(new Subscription() {
               @Override public void request(long n) {
                 s.request(n);
