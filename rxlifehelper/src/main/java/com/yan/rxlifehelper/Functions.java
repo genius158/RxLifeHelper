@@ -22,8 +22,7 @@ class Functions {
 
   static final Function<Object, Completable> CANCEL_COMPLETABLE =
       new Function<Object, Completable>() {
-        @Override
-        public Completable apply(Object ignore) throws Exception {
+        @Override public Completable apply(Object ignore) throws Exception {
           return Completable.error(new CancellationException());
         }
       };

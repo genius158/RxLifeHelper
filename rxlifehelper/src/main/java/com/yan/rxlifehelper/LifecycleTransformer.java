@@ -36,47 +36,40 @@ import static com.yan.rxlifehelper.Preconditions.checkNotNull;
 /**
  * Transformer that continues a subscription until a second Observable emits an event.
  */
-class LifecycleTransformer<T>
-    implements ObservableTransformer<T, T>,
-    FlowableTransformer<T, T>,
-    SingleTransformer<T, T>,
-    MaybeTransformer<T, T>,
-    CompletableTransformer {
+class LifecycleTransformer<T> implements ObservableTransformer<T, T>, FlowableTransformer<T, T>,
+    SingleTransformer<T, T>, MaybeTransformer<T, T>, CompletableTransformer {
   final Observable<?> observable;
+  final Runnable onComplete;
 
-  LifecycleTransformer(Observable<?> observable) {
+  LifecycleTransformer(Observable<?> observable, Runnable onComplete) {
     checkNotNull(observable, "observable == null");
     this.observable = observable;
+    this.onComplete = onComplete;
   }
 
-  @Override
-  public ObservableSource<T> apply(Observable<T> upstream) {
-    return upstream.takeUntil(observable);
+  @Override public ObservableSource<T> apply(Observable<T> upstream) {
+    return RXWrapHelper.wrap(upstream, onComplete).takeUntil(observable);
   }
 
-  @Override
-  public Publisher<T> apply(Flowable<T> upstream) {
-    return upstream.takeUntil(observable.toFlowable(BackpressureStrategy.LATEST));
+  @Override public Publisher<T> apply(Flowable<T> upstream) {
+    return RXWrapHelper.wrap(upstream, onComplete)
+        .takeUntil(observable.toFlowable(BackpressureStrategy.LATEST));
   }
 
-  @Override
-  public SingleSource<T> apply(Single<T> upstream) {
-    return upstream.takeUntil(observable.firstOrError());
+  @Override public SingleSource<T> apply(Single<T> upstream) {
+    return RXWrapHelper.wrap(upstream, onComplete).takeUntil(observable.firstOrError());
   }
 
-  @Override
-  public MaybeSource<T> apply(Maybe<T> upstream) {
-    return upstream.takeUntil(observable.firstElement());
+  @Override public MaybeSource<T> apply(Maybe<T> upstream) {
+    return RXWrapHelper.wrap(upstream, onComplete).takeUntil(observable.firstElement());
   }
 
-  @Override
-  public CompletableSource apply(Completable upstream) {
-    return Completable.ambArray(upstream,
+  @Override public CompletableSource apply(Completable upstream) {
+    return Completable.ambArray(RXWrapHelper.wrap(upstream, onComplete),
         observable.flatMapCompletable(Functions.CANCEL_COMPLETABLE));
   }
 
-  @Override
-  public boolean equals(Object o) {
+  @Override public boolean equals(Object o) {
     if (this == o) {
       return true;
     }
@@ -89,15 +82,11 @@ class LifecycleTransformer<T>
     return observable.equals(that.observable);
   }
 
-  @Override
-  public int hashCode() {
+  @Override public int hashCode() {
     return observable.hashCode();
   }
 
-  @Override
-  public String toString() {
-    return "LifecycleTransformer{" +
-        "observable=" + observable +
-        '}';
+  @Override public String toString() {
+    return "LifecycleTransformer{" + "observable=" + observable + '}';
   }
 }

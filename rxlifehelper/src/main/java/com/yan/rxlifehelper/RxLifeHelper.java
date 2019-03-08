@@ -45,7 +45,7 @@ public class RxLifeHelper {
       @Override public boolean test(String innerTag) throws Exception {
         return tag.equals(innerTag);
       }
-    }));
+    }), null);
   }
 
   public static void sendFilterTag(String tag) {
@@ -73,11 +73,18 @@ public class RxLifeHelper {
 
   public static <T> LifecycleTransformer<T> bindLifeOwnerUntilEvent(LifecycleOwner lifecycleOwner,
       Lifecycle.Event event) {
-    InnerLifeCycleManager lifeCycleManager = getLifeManager(lifecycleOwner);
+    final String key = lifecycleOwner.getClass().getName();
+    final InnerLifeCycleManager lifeCycleManager = getLifeManager(lifecycleOwner, key);
     if (lifeCycleManager == null) {
       return bindErrorEvent(new NullPointerException("RxLifeHelper: target could not be null"));
     }
-    return RxLifecycle.bindUntilEvent(lifeCycleManager.lifecycleSubject, event);
+    return RxLifecycle.bindUntilEvent(lifeCycleManager.lifecycleSubject, event, new Runnable() {
+      @Override public void run() {
+        if (!lifeCycleManager.lifecycleSubject.hasObservers()) {
+          TAG_LIFECYCLE_MAP.remove(key);
+        }
+      }
+    });
   }
 
   /**
@@ -85,14 +92,13 @@ public class RxLifeHelper {
    */
   private static <T> LifecycleTransformer<T> bindErrorEvent(Throwable throwable) {
     // 这里处理参数错误下，直接 异常返回
-    return RxLifecycle.bind(Observable.error(throwable));
+    return RxLifecycle.bind(Observable.error(throwable), null);
   }
 
-  private static InnerLifeCycleManager getLifeManager(LifecycleOwner lifecycleOwner) {
+  private static InnerLifeCycleManager getLifeManager(LifecycleOwner lifecycleOwner, String key) {
     if (lifecycleOwner == null) {
       return null;
     }
-    String key = lifecycleOwner.getClass().getName();
     InnerLifeCycleManager lifeCycleManager = TAG_LIFECYCLE_MAP.get(key);
     if (lifeCycleManager == null) {
       lifeCycleManager = new InnerLifeCycleManager(lifecycleOwner);

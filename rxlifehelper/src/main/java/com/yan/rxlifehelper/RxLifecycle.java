@@ -34,17 +34,16 @@ class RxLifecycle {
    * @param event the event which should conclude notifications from the source
    * @return a reusable {@link LifecycleTransformer} that unsubscribes the source at the specified event
    */
-  static <T, R> LifecycleTransformer<T> bindUntilEvent(final Observable<R> lifecycle,
-      final R event) {
+  static <T, R> LifecycleTransformer<T> bindUntilEvent(final Observable<R> lifecycle, final R event,
+      Runnable onComplete) {
     checkNotNull(lifecycle, "lifecycle == null");
     checkNotNull(event, "event == null");
-    return bind(takeUntilEvent(lifecycle, event));
+    return bind(takeUntilEvent(lifecycle, event), onComplete);
   }
 
   private static <R> Observable<R> takeUntilEvent(final Observable<R> lifecycle, final R event) {
     return lifecycle.filter(new Predicate<R>() {
-      @Override
-      public boolean test(R lifecycleEvent) throws Exception {
+      @Override public boolean test(R lifecycleEvent) throws Exception {
         return lifecycleEvent.equals(event);
       }
     });
@@ -61,7 +60,7 @@ class RxLifecycle {
    * @return a reusable {@link LifecycleTransformer} that unsubscribes the source whenever the
    * lifecycle emits
    */
-  static <T, R> LifecycleTransformer<T> bind(final Observable<R> lifecycle) {
-    return new LifecycleTransformer<>(lifecycle);
+  static <T, R> LifecycleTransformer<T> bind(final Observable<R> lifecycle, Runnable onComplete) {
+    return new LifecycleTransformer<>(lifecycle, onComplete);
   }
 }
