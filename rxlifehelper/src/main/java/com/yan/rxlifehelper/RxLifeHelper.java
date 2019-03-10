@@ -7,7 +7,6 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import io.reactivex.Observable;
 import io.reactivex.functions.Predicate;
-import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.PublishSubject;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,7 +43,7 @@ public class RxLifeHelper {
       @Override public boolean test(String innerTag) throws Exception {
         return tag.equals(innerTag);
       }
-    }), null);
+    }));
   }
 
   public static void sendFilterTag(String tag) {
@@ -83,7 +82,7 @@ public class RxLifeHelper {
    */
   private static <T> LifecycleTransformer<T> bindErrorEvent(Throwable throwable) {
     // 这里处理参数错误下，直接 异常返回
-    return RxLifecycle.bind(Observable.error(throwable), null);
+    return RxLifecycle.bind(Observable.error(throwable));
   }
 
   /**
@@ -93,7 +92,19 @@ public class RxLifeHelper {
     /**
      * BehaviorSubject 绑定，即会发送一次最新数据
      */
-    private InnerBehaviorSubject<Lifecycle.Event> lifecycleSubject = InnerBehaviorSubject.create();
+    private InnerBehaviorSubject<Lifecycle.Event> lifecycleSubject =
+        InnerBehaviorSubject.create(new Runnable() {
+          @Override public void run() {
+            //确定没有在执行绑定，同时没有绑定对象
+            //满足则清理掉空LifeCycleMgr
+            if (atomic.get() == 0 && ! lifecycleSubject.hasObservers()) {
+              InnerLifeCycleManager mgr = TAG_LIFECYCLE_MAP.remove(getKey());
+              if (mgr != null) {
+                mgr.clear();
+              }
+            }
+          }
+        });
 
     /**
      * 判断绑定是否在执行
@@ -132,22 +143,8 @@ public class RxLifeHelper {
           }
         }
       }
-      final InnerLifeCycleManager finalLifeCycleMgr = lifeCycleMgr;
       LifecycleTransformer<T> lifecycleTransformer =
-          RxLifecycle.bindUntilEvent(lifeCycleMgr.lifecycleSubject, event,
-              // Observable执行结束回调
-              new Runnable() {
-                @Override public void run() {
-                  //确定没有在执行绑定，同时没有绑定对象
-                  //满足则清理掉空LifeCycleMgr
-                  if (atomic.get() == 0 && !finalLifeCycleMgr.lifecycleSubject.hasObservers()) {
-                    InnerLifeCycleManager mgr = TAG_LIFECYCLE_MAP.remove(key);
-                    if (mgr != null) {
-                      mgr.clear();
-                    }
-                  }
-                }
-              });
+          RxLifecycle.bindUntilEvent(lifeCycleMgr.lifecycleSubject, event);
 
       // 绑定在执行结束，则这个减一
       atomic.decrementAndGet();

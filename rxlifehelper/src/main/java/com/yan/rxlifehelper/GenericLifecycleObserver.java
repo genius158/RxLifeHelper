@@ -41,4 +41,8 @@ abstract class GenericLifecycleObserver implements LifecycleObserver {
   void clear() {
     source.getLifecycle().removeObserver(this);
   }
+
+  String getKey() {
+    return source.getClass().getName();
+  }
 }

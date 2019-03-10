@@ -1,96 +1,60 @@
 package com.yan.rxlifehelper;
 
-import android.util.Log;
-import io.reactivex.annotations.CheckReturnValue;
-import io.reactivex.annotations.Nullable;
-import io.reactivex.annotations.NonNull;
-import io.reactivex.subjects.Subject;
-import java.lang.reflect.Array;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.*;
-
 import io.reactivex.Observer;
+import io.reactivex.annotations.CheckReturnValue;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.annotations.Nullable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.internal.functions.ObjectHelper;
-import io.reactivex.internal.util.*;
+import io.reactivex.internal.util.AppendOnlyLinkedArrayList;
 import io.reactivex.internal.util.AppendOnlyLinkedArrayList.NonThrowingPredicate;
+import io.reactivex.internal.util.ExceptionHelper;
+import io.reactivex.internal.util.NotificationLite;
 import io.reactivex.plugins.RxJavaPlugins;
+import io.reactivex.subjects.Subject;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public final class InnerBehaviorSubject<T> extends Subject<T> {
+/**
+ * code copy from BehaviorSubject
+ */
+final class InnerBehaviorSubject<T> extends Subject<T> {
 
-  /** An empty array to avoid allocation in getValues(). */
-  private static final Object[] EMPTY_ARRAY = new Object[0];
-
-  final AtomicReference<Object> value;
-
-  final AtomicReference<BehaviorDisposable<T>[]> subscribers;
-
-  @SuppressWarnings("rawtypes") static final BehaviorDisposable[] EMPTY = new BehaviorDisposable[0];
-
-  @SuppressWarnings("rawtypes") static final BehaviorDisposable[] TERMINATED =
+  private final AtomicReference<Object> value;
+  private final AtomicReference<BehaviorDisposable<T>[]> subscribers;
+  private @SuppressWarnings("rawtypes") static final BehaviorDisposable[] EMPTY =
       new BehaviorDisposable[0];
-  final ReadWriteLock lock;
-  final Lock readLock;
-  final Lock writeLock;
-
-  final AtomicReference<Throwable> terminalEvent;
-
-  long index;
+  private @SuppressWarnings("rawtypes") static final BehaviorDisposable[] TERMINATED =
+      new BehaviorDisposable[0];
+  private final ReadWriteLock lock;
+  private final Lock readLock;
+  private final Lock writeLock;
+  private final AtomicReference<Throwable> terminalEvent;
+  private long index;
 
   /**
-   * Creates a {@link InnerBehaviorSubject} without a default item.
-   *
-   * @param <T> the type of item the Subject will emit
-   * @return the constructed {@link InnerBehaviorSubject}
+   * use this to clear TAG_LIFECYCLE_MAP in RxLifeHelper
    */
-  @CheckReturnValue @NonNull public static <T> InnerBehaviorSubject<T> create() {
-    return new InnerBehaviorSubject<T>();
+  private Runnable onCancel;
+
+  @CheckReturnValue @NonNull static <T> InnerBehaviorSubject<T> create(Runnable onCancel) {
+    return new InnerBehaviorSubject<T>(onCancel);
   }
 
-  /**
-   * Creates a {@link InnerBehaviorSubject} that emits the last item it observed and all subsequent
-   * items to each
-   * {@link Observer} that subscribes to it.
-   *
-   * @param <T> the type of item the Subject will emit
-   * @param defaultValue the item that will be emitted first to any {@link Observer} as long as the
-   * {@link InnerBehaviorSubject} has not yet observed any items from its source {@code Observable}
-   * @return the constructed {@link InnerBehaviorSubject}
-   */
-  @CheckReturnValue @NonNull public static <T> InnerBehaviorSubject<T> createDefault(
-      T defaultValue) {
-    return new InnerBehaviorSubject<T>(defaultValue);
-  }
-
-  /**
-   * Constructs an empty InnerBehaviorSubject.
-   *
-   * @since 2.0
-   */
-  @SuppressWarnings("unchecked") InnerBehaviorSubject() {
+  private @SuppressWarnings("unchecked") InnerBehaviorSubject(Runnable onCancel) {
     this.lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
     this.subscribers = new AtomicReference<BehaviorDisposable<T>[]>(EMPTY);
-    this.value = new AtomicReference<Object>();
-    this.terminalEvent = new AtomicReference<Throwable>();
+    this.value = new AtomicReference<>();
+    this.terminalEvent = new AtomicReference<>();
+    this.onCancel = onCancel;
   }
 
-  /**
-   * Constructs a InnerBehaviorSubject with the given initial value.
-   *
-   * @param defaultValue the initial value, not null (verified)
-   * @throws NullPointerException if {@code defaultValue} is null
-   * @since 2.0
-   */
-  InnerBehaviorSubject(T defaultValue) {
-    this();
-    this.value.lazySet(ObjectHelper.requireNonNull(defaultValue, "defaultValue is null"));
-  }
-
-  @Override protected void subscribeActual(final Observer<? super T> inObserver) {
-    final Observer<? super T> observer = inObserver;
-    BehaviorDisposable<T> bs = new BehaviorDisposable<T>(observer, this);
+  @Override protected void subscribeActual(final Observer<? super T> observer) {
+    BehaviorDisposable<T> bs = new BehaviorDisposable<>(observer, this);
     observer.onSubscribe(bs);
     if (add(bs)) {
       if (bs.cancelled) {
@@ -147,7 +111,8 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
     }
     Object o = NotificationLite.complete();
     for (BehaviorDisposable<T> bs : terminate(o)) {
-      bs.emitNext(o, index);  // relaxed read okay since this is the only mutator thread
+      // relaxed read okay since this is the only mutator thread
+      bs.emitNext(o, index);
     }
   }
 
@@ -167,67 +132,6 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
     return null;
   }
 
-  /**
-   * Returns a single value the Subject currently has or null if no such value exists.
-   * <p>The method is thread-safe.
-   *
-   * @return a single value the Subject currently has or null if no such value exists
-   */
-  @Nullable public T getValue() {
-    Object o = value.get();
-    if (NotificationLite.isComplete(o) || NotificationLite.isError(o)) {
-      return null;
-    }
-    return NotificationLite.getValue(o);
-  }
-
-  /**
-   * Returns an Object array containing snapshot all values of the Subject.
-   * <p>The method is thread-safe.
-   *
-   * @return the array containing the snapshot of all values of the Subject
-   * @deprecated in 2.1.14; put the result of {@link #getValue()} into an array manually, will be removed in 3.x
-   */
-  @Deprecated public Object[] getValues() {
-    @SuppressWarnings("unchecked") T[] a = (T[]) EMPTY_ARRAY;
-    T[] b = getValues(a);
-    if (b == EMPTY_ARRAY) {
-      return new Object[0];
-    }
-    return b;
-  }
-
-  /**
-   * Returns a typed array containing a snapshot of all values of the Subject.
-   * <p>The method follows the conventions of Collection.toArray by setting the array element
-   * after the last value to null (if the capacity permits).
-   * <p>The method is thread-safe.
-   *
-   * @param array the target array to copy values into if it fits
-   * @return the given array if the values fit into it or a new array containing all values
-   * @deprecated in 2.1.14; put the result of {@link #getValue()} into an array manually, will be removed in 3.x
-   */
-  @Deprecated @SuppressWarnings("unchecked") public T[] getValues(T[] array) {
-    Object o = value.get();
-    if (o == null || NotificationLite.isComplete(o) || NotificationLite.isError(o)) {
-      if (array.length != 0) {
-        array[0] = null;
-      }
-      return array;
-    }
-    T v = NotificationLite.getValue(o);
-    if (array.length != 0) {
-      array[0] = v;
-      if (array.length != 1) {
-        array[1] = null;
-      }
-    } else {
-      array = (T[]) Array.newInstance(array.getClass().getComponentType(), 1);
-      array[0] = v;
-    }
-    return array;
-  }
-
   @Override public boolean hasComplete() {
     Object o = value.get();
     return NotificationLite.isComplete(o);
@@ -238,18 +142,7 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
     return NotificationLite.isError(o);
   }
 
-  /**
-   * Returns true if the subject has any value.
-   * <p>The method is thread-safe.
-   *
-   * @return true if the subject has any value
-   */
-  public boolean hasValue() {
-    Object o = value.get();
-    return o != null && !NotificationLite.isComplete(o) && !NotificationLite.isError(o);
-  }
-
-  boolean add(BehaviorDisposable<T> rs) {
+  private boolean add(BehaviorDisposable<T> rs) {
     for (; ; ) {
       BehaviorDisposable<T>[] a = subscribers.get();
       if (a == TERMINATED) {
@@ -265,7 +158,7 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
     }
   }
 
-  @SuppressWarnings("unchecked") void remove(BehaviorDisposable<T> rs) {
+  private @SuppressWarnings("unchecked") void remove(BehaviorDisposable<T> rs) {
     for (; ; ) {
       BehaviorDisposable<T>[] a = subscribers.get();
       int len = a.length;
@@ -297,7 +190,7 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
     }
   }
 
-  @SuppressWarnings("unchecked") BehaviorDisposable<T>[] terminate(Object terminalValue) {
+  private @SuppressWarnings("unchecked") BehaviorDisposable<T>[] terminate(Object terminalValue) {
 
     BehaviorDisposable<T>[] a = subscribers.getAndSet(TERMINATED);
     if (a != TERMINATED) {
@@ -308,39 +201,38 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
     return a;
   }
 
-  void setCurrent(Object o) {
+  private void setCurrent(Object o) {
     writeLock.lock();
     index++;
     value.lazySet(o);
     writeLock.unlock();
   }
 
-  static final class BehaviorDisposable<T> implements Disposable, NonThrowingPredicate<Object> {
+  private static final class BehaviorDisposable<T>
+      implements Disposable, NonThrowingPredicate<Object> {
 
-    final Observer<? super T> downstream;
-    final InnerBehaviorSubject<T> state;
+    private final Observer<? super T> downstream;
+    private final InnerBehaviorSubject<T> state;
 
-    boolean next;
-    boolean emitting;
-    AppendOnlyLinkedArrayList<Object> queue;
+    private boolean next;
+    private boolean emitting;
+    private AppendOnlyLinkedArrayList<Object> queue;
 
-    boolean fastPath;
+    private boolean fastPath;
 
-    volatile boolean cancelled;
+    private volatile boolean cancelled;
+    private long index;
 
-    long index;
-
-    BehaviorDisposable(Observer<? super T> actual, InnerBehaviorSubject<T> state) {
+    private BehaviorDisposable(Observer<? super T> actual, InnerBehaviorSubject<T> state) {
       this.downstream = actual;
       this.state = state;
     }
 
     @Override public void dispose() {
-      Log.e("BehaviorDisposable", "dispose: dispose dispose");
       if (!cancelled) {
         cancelled = true;
-
         state.remove(this);
+        state.onCancel.run();
       }
     }
 
@@ -348,7 +240,7 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
       return cancelled;
     }
 
-    void emitFirst() {
+    private void emitFirst() {
       if (cancelled) {
         return;
       }
@@ -382,7 +274,7 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
       }
     }
 
-    void emitNext(Object value, long stateIndex) {
+    private void emitNext(Object value, long stateIndex) {
       if (cancelled) {
         return;
       }
@@ -415,7 +307,7 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
       return cancelled || NotificationLite.accept(o, downstream);
     }
 
-    void emitLoop() {
+    private void emitLoop() {
       for (; ; ) {
         if (cancelled) {
           return;
