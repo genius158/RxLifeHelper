@@ -31,41 +31,36 @@ import io.reactivex.SingleSource;
 import io.reactivex.SingleTransformer;
 import org.reactivestreams.Publisher;
 
-import static com.yan.rxlifehelper.Preconditions.checkNotNull;
-
 /**
  * Transformer that continues a subscription until a second Observable emits an event.
  */
-class LifecycleTransformer<T> implements ObservableTransformer<T, T>, FlowableTransformer<T, T>,
-    SingleTransformer<T, T>, MaybeTransformer<T, T>, CompletableTransformer {
-  final Observable<?> observable;
-  final Runnable onComplete;
+class LifecycleTransformer<T>
+    implements ObservableTransformer<T, T>, FlowableTransformer<T, T>, SingleTransformer<T, T>,
+    MaybeTransformer<T, T>, CompletableTransformer {
+  private final Observable<?> observable;
 
-  LifecycleTransformer(Observable<?> observable, Runnable onComplete) {
-    checkNotNull(observable, "observable == null");
+  LifecycleTransformer(Observable<?> observable) {
     this.observable = observable;
-    this.onComplete = onComplete;
   }
 
   @Override public ObservableSource<T> apply(Observable<T> upstream) {
-    return RXWrapHelper.wrap(upstream, onComplete).takeUntil(observable);
+    return upstream.takeUntil(observable);
   }
 
   @Override public Publisher<T> apply(Flowable<T> upstream) {
-    return RXWrapHelper.wrap(upstream, onComplete)
-        .takeUntil(observable.toFlowable(BackpressureStrategy.LATEST));
+    return upstream.takeUntil(observable.toFlowable(BackpressureStrategy.LATEST));
   }
 
   @Override public SingleSource<T> apply(Single<T> upstream) {
-    return RXWrapHelper.wrap(upstream, onComplete).takeUntil(observable.firstOrError());
+    return upstream.takeUntil(observable.firstOrError());
   }
 
   @Override public MaybeSource<T> apply(Maybe<T> upstream) {
-    return RXWrapHelper.wrap(upstream, onComplete).takeUntil(observable.firstElement());
+    return upstream.takeUntil(observable.firstElement());
   }
 
   @Override public CompletableSource apply(Completable upstream) {
-    return Completable.ambArray(RXWrapHelper.wrap(upstream, onComplete),
+    return Completable.ambArray(upstream,
         observable.flatMapCompletable(Functions.CANCEL_COMPLETABLE));
   }
 
