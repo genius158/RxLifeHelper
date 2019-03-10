@@ -1,9 +1,7 @@
 package com.yan.rxlifehelper;
 
 import android.arch.lifecycle.Lifecycle;
-import android.arch.lifecycle.LifecycleObserver;
 import android.arch.lifecycle.LifecycleOwner;
-import android.arch.lifecycle.OnLifecycleEvent;
 import android.content.Context;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
@@ -12,6 +10,7 @@ import io.reactivex.functions.Predicate;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.PublishSubject;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 基于 rxlifecycle
@@ -73,18 +72,10 @@ public class RxLifeHelper {
 
   public static <T> LifecycleTransformer<T> bindLifeOwnerUntilEvent(LifecycleOwner lifecycleOwner,
       Lifecycle.Event event) {
-    final String key = lifecycleOwner.getClass().getName();
-    final InnerLifeCycleManager lifeCycleManager = getLifeManager(lifecycleOwner, key);
-    if (lifeCycleManager == null) {
+    if (lifecycleOwner == null) {
       return bindErrorEvent(new NullPointerException("RxLifeHelper: target could not be null"));
     }
-    return RxLifecycle.bindUntilEvent(lifeCycleManager.lifecycleSubject, event, new Runnable() {
-      @Override public void run() {
-        if (!lifeCycleManager.lifecycleSubject.hasObservers()) {
-          TAG_LIFECYCLE_MAP.remove(key);
-        }
-      }
-    });
+    return InnerLifeCycleManager.bind(lifecycleOwner, event);
   }
 
   /**
@@ -95,27 +86,19 @@ public class RxLifeHelper {
     return RxLifecycle.bind(Observable.error(throwable), null);
   }
 
-  private static InnerLifeCycleManager getLifeManager(LifecycleOwner lifecycleOwner, String key) {
-    if (lifecycleOwner == null) {
-      return null;
-    }
-    InnerLifeCycleManager lifeCycleManager = TAG_LIFECYCLE_MAP.get(key);
-    if (lifeCycleManager == null) {
-      lifeCycleManager = new InnerLifeCycleManager(lifecycleOwner);
-      lifecycleOwner.getLifecycle().addObserver(lifeCycleManager);
-      TAG_LIFECYCLE_MAP.put(key, lifeCycleManager);
-    }
-    return lifeCycleManager;
-  }
-
   /**
    * 生命周期管理, 生命周期各个阶段分发
    */
   private static class InnerLifeCycleManager extends GenericLifecycleObserver {
     /**
-     * 绑定，即会发送一次最新数据
+     * BehaviorSubject 绑定，即会发送一次最新数据
      */
-    private final BehaviorSubject<Lifecycle.Event> lifecycleSubject = BehaviorSubject.create();
+    private BehaviorSubject<Lifecycle.Event> lifecycleSubject = BehaviorSubject.create();
+
+    /**
+     * 判断绑定是否在执行
+     */
+    private static AtomicInteger atomic = new AtomicInteger();
 
     InnerLifeCycleManager(LifecycleOwner source) {
       super(source);
@@ -125,43 +108,51 @@ public class RxLifeHelper {
       lifecycleSubject.onNext(event);
       if (event == Lifecycle.Event.ON_DESTROY) {
         TAG_LIFECYCLE_MAP.remove(source.getClass().getName());
-        source.getLifecycle().removeObserver(this);
+        clear();
       }
     }
-  }
 
-  abstract static class GenericLifecycleObserver implements LifecycleObserver {
-    LifecycleOwner source;
+    private static <T> LifecycleTransformer<T> bind(LifecycleOwner lifecycleOwner,
+        Lifecycle.Event event) {
+      // 绑定在执行，则这个加1
+      atomic.incrementAndGet();
 
-    GenericLifecycleObserver(LifecycleOwner source) {
-      this.source = source;
+      final String key = lifecycleOwner.getClass().getName();
+      InnerLifeCycleManager lifeCycleMgr = TAG_LIFECYCLE_MAP.get(key);
+
+      // 多线程的情况下，保证InnerLifeCycleManager不会创建多个，
+      // 否则后面创建的会覆盖前面的记录
+      if (lifeCycleMgr == null) {
+        synchronized (RxLifeHelper.class) {
+          lifeCycleMgr = TAG_LIFECYCLE_MAP.get(key);
+          if (lifeCycleMgr == null) {
+            lifeCycleMgr = new InnerLifeCycleManager(lifecycleOwner);
+            lifecycleOwner.getLifecycle().addObserver(lifeCycleMgr);
+            TAG_LIFECYCLE_MAP.put(key, lifeCycleMgr);
+          }
+        }
+      }
+      final InnerLifeCycleManager finalLifeCycleMgr = lifeCycleMgr;
+      LifecycleTransformer<T> lifecycleTransformer =
+          RxLifecycle.bindUntilEvent(lifeCycleMgr.lifecycleSubject, event,
+              // Observable执行结束回调
+              new Runnable() {
+                @Override public void run() {
+                  //确定没有在执行绑定，同时没有绑定对象
+                  //满足则清理掉空LifeCycleMgr
+                  if (atomic.get() == 0 && !finalLifeCycleMgr.lifecycleSubject.hasObservers()) {
+                    InnerLifeCycleManager mgr = TAG_LIFECYCLE_MAP.remove(key);
+                    if (mgr != null) {
+                      mgr.clear();
+                    }
+                  }
+                }
+              });
+
+      // 绑定在执行结束，则这个减一
+      atomic.decrementAndGet();
+      return lifecycleTransformer;
     }
-
-    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE) void onCreate() {
-      onStateChanged(source, Lifecycle.Event.ON_CREATE);
-    }
-
-    @OnLifecycleEvent(Lifecycle.Event.ON_START) void onStart() {
-      onStateChanged(source, Lifecycle.Event.ON_START);
-    }
-
-    @OnLifecycleEvent(Lifecycle.Event.ON_RESUME) void onResume() {
-      onStateChanged(source, Lifecycle.Event.ON_RESUME);
-    }
-
-    @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE) void onPause() {
-      onStateChanged(source, Lifecycle.Event.ON_PAUSE);
-    }
-
-    @OnLifecycleEvent(Lifecycle.Event.ON_STOP) void onStop() {
-      onStateChanged(source, Lifecycle.Event.ON_STOP);
-    }
-
-    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY) void onDestroy() {
-      onStateChanged(source, Lifecycle.Event.ON_DESTROY);
-    }
-
-    abstract void onStateChanged(final LifecycleOwner source, Lifecycle.Event event);
   }
 }
 
