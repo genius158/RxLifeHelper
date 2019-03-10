@@ -9,15 +9,13 @@ import io.reactivex.Flowable;
 import io.reactivex.FlowableSubscriber;
 import io.reactivex.Observable;
 import io.reactivex.Observer;
-import io.reactivex.Scheduler;
 import io.reactivex.Single;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
-import io.reactivex.functions.Function;
-import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.reactivestreams.Subscription;
 
 public class MainActivity extends AppCompatActivity {
@@ -30,14 +28,16 @@ public class MainActivity extends AppCompatActivity {
   @Override protected void onResume() {
     super.onResume();
 
-    for (int i = 0; i < 100; i++) {
+
+    for (int i = 0; i < 1000; i++) {
+      final int finalI = i;
       Single.timer(1000, TimeUnit.MILLISECONDS)
           .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
           .subscribeOn(Schedulers.newThread())
           .subscribe(new Consumer<Long>() {
             @Override public void accept(Long aLong) throws Exception {
               Log.e("RxLifeHelper", "interval ---------");
-              Observable.just(111)
+              Observable.just(finalI)
                   .compose(RxLifeHelper.<Integer>bindUntilLifeEvent(MainActivity.this,
                       Lifecycle.Event.ON_PAUSE))
                   .subscribe(new Observer<Integer>() {
@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override public void onNext(Integer integer) {
-                      Log.e("onSubscribe", "onNext: ");
+                      Log.e("onSubscribe", "onNext: " + integer + "   ");
                     }
 
                     @Override public void onError(Throwable e) {

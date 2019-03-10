@@ -96,22 +96,39 @@ public class RxLifeHelper {
         InnerBehaviorSubject.create(new Runnable() {
           @Override public void run() {
             //确定没有在执行绑定，同时没有绑定对象
-            //满足则清理掉空LifeCycleMgr
-            if (atomic.get() == 0 && ! lifecycleSubject.hasObservers()) {
-              InnerLifeCycleManager mgr = TAG_LIFECYCLE_MAP.remove(getKey());
-              if (mgr != null) {
-                mgr.clear();
+            if (!lifecycleSubject.hasObservers()) {
+              InnerLifeCycleManager mgr = null;
+              String key = getKey();
+              for (; ; ) {
+                if (lifecycleSubject.hasObservers()) {
+                  break;
+                }
+                boolean set = atomic.compareAndSet(0, 2);
+                if (set) {
+                  if (lifecycleSubject.hasObservers()) {
+                    break;
+                  }
+                  mgr = TAG_LIFECYCLE_MAP.remove(key);
+                  if (mgr != null) {
+                    mgr.clear();
+                  }
+                }
+                if (atomic.compareAndSet(2, 0)) {
+                  break;
+                }
+                TAG_LIFECYCLE_MAP.put(key, mgr);
               }
             }
           }
         });
 
     /**
-     * 判断绑定是否在执行
+     * 判断当前状态
+     * 0.正常 1.add 2.remove
      */
-    private static AtomicInteger atomic = new AtomicInteger();
+    private AtomicInteger atomic = new AtomicInteger();
 
-    InnerLifeCycleManager(LifecycleOwner source) {
+    private InnerLifeCycleManager(LifecycleOwner source) {
       super(source);
     }
 
@@ -126,7 +143,6 @@ public class RxLifeHelper {
     private static <T> LifecycleTransformer<T> bind(LifecycleOwner lifecycleOwner,
         Lifecycle.Event event) {
       // 绑定在执行，则这个加1
-      atomic.incrementAndGet();
 
       final String key = lifecycleOwner.getClass().getName();
       InnerLifeCycleManager lifeCycleMgr = TAG_LIFECYCLE_MAP.get(key);
@@ -138,16 +154,31 @@ public class RxLifeHelper {
           lifeCycleMgr = TAG_LIFECYCLE_MAP.get(key);
           if (lifeCycleMgr == null) {
             lifeCycleMgr = new InnerLifeCycleManager(lifecycleOwner);
-            lifecycleOwner.getLifecycle().addObserver(lifeCycleMgr);
             TAG_LIFECYCLE_MAP.put(key, lifeCycleMgr);
           }
         }
       }
-      LifecycleTransformer<T> lifecycleTransformer =
-          RxLifecycle.bindUntilEvent(lifeCycleMgr.lifecycleSubject, event);
+      return lifeCycleMgr.bindInner(event, lifecycleOwner);
+    }
 
-      // 绑定在执行结束，则这个减一
-      atomic.decrementAndGet();
+    private <T> LifecycleTransformer<T> bindInner(Lifecycle.Event event,
+        LifecycleOwner lifecycleOwner) {
+      LifecycleTransformer<T> lifecycleTransformer =
+          RxLifecycle.bindUntilEvent(lifecycleSubject, event);
+      for (; ; ) {
+        boolean set = atomic.compareAndSet(0, 1);
+        if (set) {
+          final String key = getKey();
+          // 绑定在执行结束，则这个减一
+          if (!TAG_LIFECYCLE_MAP.containsKey(key)) {
+            TAG_LIFECYCLE_MAP.put(key, this);
+          }
+        }
+        lifecycleOwner.getLifecycle().addObserver(this);
+        if (atomic.compareAndSet(1, 0)) {
+          break;
+        }
+      }
       return lifecycleTransformer;
     }
   }
