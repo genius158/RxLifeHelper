@@ -116,7 +116,6 @@ public class RxLifeHelper {
                 if (atomic.compareAndSet(2, 0)) {
                   break;
                 }
-                TAG_LIFECYCLE_MAP.put(key, mgr);
               }
             }
           }

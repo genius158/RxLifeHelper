@@ -15,7 +15,6 @@ import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.reactivestreams.Subscription;
 
 public class MainActivity extends AppCompatActivity {
@@ -27,9 +26,8 @@ public class MainActivity extends AppCompatActivity {
 
   @Override protected void onResume() {
     super.onResume();
-
-
-    for (int i = 0; i < 1000; i++) {
+    final long start = System.currentTimeMillis();
+    for (int i = 0; i < 10000; i++) {
       final int finalI = i;
       Single.timer(1000, TimeUnit.MILLISECONDS)
           .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
@@ -54,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override public void onComplete() {
-                      Log.e("onSubscribe", "onComplete: ");
+                      Log.e("onSubscribe", "onComplete: " + (System.currentTimeMillis() - start));
                     }
                   });
             }
