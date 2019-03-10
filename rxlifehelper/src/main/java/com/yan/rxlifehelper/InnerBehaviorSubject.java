@@ -1,5 +1,6 @@
 package com.yan.rxlifehelper;
 
+import android.util.Log;
 import io.reactivex.annotations.CheckReturnValue;
 import io.reactivex.annotations.Nullable;
 import io.reactivex.annotations.NonNull;
@@ -88,31 +89,7 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
   }
 
   @Override protected void subscribeActual(final Observer<? super T> inObserver) {
-    Observer<T> observer = new Observer<T>() {
-      BehaviorDisposable disposable;
-
-      @Override public void onSubscribe(Disposable d) {
-        disposable = (BehaviorDisposable) d;
-        inObserver.onSubscribe(d);
-      }
-
-      @Override public void onNext(T t) {
-        inObserver.onNext(t);
-        if(disposable.isDisposed()){
-          remove(disposable);
-        }
-      }
-
-      @Override public void onError(Throwable e) {
-        inObserver.onError(e);
-        remove(disposable);
-      }
-
-      @Override public void onComplete() {
-        inObserver.onComplete();
-        remove(disposable);
-      }
-    };
+    final Observer<? super T> observer = inObserver;
     BehaviorDisposable<T> bs = new BehaviorDisposable<T>(observer, this);
     observer.onSubscribe(bs);
     if (add(bs)) {
@@ -359,6 +336,7 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
     }
 
     @Override public void dispose() {
+      Log.e("BehaviorDisposable", "dispose: dispose dispose");
       if (!cancelled) {
         cancelled = true;
 
