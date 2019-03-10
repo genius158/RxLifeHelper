@@ -98,7 +98,9 @@ public final class InnerBehaviorSubject<T> extends Subject<T> {
 
       @Override public void onNext(T t) {
         inObserver.onNext(t);
-        remove(disposable);
+        if(disposable.isDisposed()){
+          remove(disposable);
+        }
       }
 
       @Override public void onError(Throwable e) {
