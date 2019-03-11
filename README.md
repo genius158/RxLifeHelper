@@ -5,9 +5,9 @@
 冲突，尝试
 <br/>
 implementation('com.yan:rxlifehelper:1.2.0'){
-    exclude group: 'com.android.support'
-    exclude group: 'io.reactivex.rxjava2'
-  }
+<br/> exclude group: 'com.android.support'
+<br/> exclude group: 'io.reactivex.rxjava2'
+<br/> }
 
 ### demo
 
