@@ -110,7 +110,7 @@ public class RxLifeHelper {
                   }
                   mgr = TAG_LIFECYCLE_MAP.remove(key);
                   if (mgr != null) {
-                    mgr.clear();
+                    //mgr.clear();
                   }
                 }
                 if (atomic.compareAndSet(2, 0)) {
@@ -154,6 +154,7 @@ public class RxLifeHelper {
           if (lifeCycleMgr == null) {
             lifeCycleMgr = new InnerLifeCycleManager(lifecycleOwner);
             TAG_LIFECYCLE_MAP.put(key, lifeCycleMgr);
+            lifecycleOwner.getLifecycle().addObserver(lifeCycleMgr);
           }
         }
       }
@@ -173,7 +174,6 @@ public class RxLifeHelper {
             TAG_LIFECYCLE_MAP.put(key, this);
           }
         }
-        lifecycleOwner.getLifecycle().addObserver(this);
         if (atomic.compareAndSet(1, 0)) {
           break;
         }
