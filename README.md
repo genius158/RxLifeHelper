@@ -1,6 +1,6 @@
 # RxLifeHelper
 
-### compile 'com.yan:rxlifehelper:1.1.0'
+### compile 'com.yan:rxlifehelper:1.1.1'
 
 ### demo
 
