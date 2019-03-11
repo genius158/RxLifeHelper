@@ -159,14 +159,15 @@ public class RxLifeHelper {
       if (lifeCycleMgr == null) {
         for (; ; ) {
           boolean mapOp = MAP_ATOMIC.compareAndSet(0, 1);
+          LifecycleTransformer<T> transformer = null;
           if (mapOp) {
             lifeCycleMgr = TAG_LIFECYCLE_MAP.get(key);
             if (lifeCycleMgr == null) {
               lifeCycleMgr = new InnerLifeCycleManager(lifecycleOwner);
-              return lifeCycleMgr.put2Map(lifecycleOwner, event);
+              transformer = lifeCycleMgr.put2Map(lifecycleOwner, event);
             }
             if (MAP_ATOMIC.compareAndSet(1, 0)) {
-              break;
+              return transformer;
             }
           }
         }
@@ -185,6 +186,7 @@ public class RxLifeHelper {
           }
           if (!TAG_LIFECYCLE_MAP.containsKey(key)) {
             TAG_LIFECYCLE_MAP.put(key, this);
+            lifecycleOwner.getLifecycle().addObserver(this);
           }
           reset(lifecycleOwner);
           if (compareAndSet(1, 0)) {
