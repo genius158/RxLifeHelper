@@ -40,6 +40,14 @@ abstract class GenericLifecycleObserver implements LifecycleObserver {
 
   void clear() {
     source.getLifecycle().removeObserver(this);
+    source = null;
+  }
+
+  void reset(LifecycleOwner lifecycleOwner) {
+    if (source == null) {
+      source = lifecycleOwner;
+      source.getLifecycle().addObserver(this);
+    }
   }
 
   String getKey() {
@@ -47,6 +55,9 @@ abstract class GenericLifecycleObserver implements LifecycleObserver {
   }
 
   static String getKey(Object object) {
+    if (object == null) {
+      return "null";
+    }
     return object.toString();
   }
 }

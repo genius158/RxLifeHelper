@@ -1,10 +1,10 @@
 # RxLifeHelper
 
-### implementation 'com.yan:rxlifehelper:1.2.0'
+### implementation 'com.yan:rxlifehelper:1.2.1'
 
 冲突，尝试
 <br/>
-implementation('com.yan:rxlifehelper:1.2.0'){
+implementation('com.yan:rxlifehelper:1.2.1'){
 <br/> exclude group: 'com.android.support'
 <br/> exclude group: 'io.reactivex.rxjava2'
 <br/> }

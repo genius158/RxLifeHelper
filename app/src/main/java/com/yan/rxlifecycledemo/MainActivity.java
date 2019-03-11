@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
       final int finalI = i;
       Single.timer(0, TimeUnit.MILLISECONDS)
           .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
-          .subscribeOn(Schedulers.newThread())
+          .subscribeOn(Schedulers.io())
           .subscribe(new Consumer<Long>() {
             @Override public void accept(Long aLong) throws Exception {
               Log.e("RxLifeHelper", "interval ---------");

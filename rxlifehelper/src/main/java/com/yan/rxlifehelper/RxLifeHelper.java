@@ -110,7 +110,7 @@ public class RxLifeHelper {
                   }
                   mgr = TAG_LIFECYCLE_MAP.remove(key);
                   if (mgr != null) {
-                    //mgr.clear();
+                    mgr.clear();
                   }
                 }
                 if (atomic.compareAndSet(2, 0)) {
@@ -129,12 +129,13 @@ public class RxLifeHelper {
 
     private InnerLifeCycleManager(LifecycleOwner source) {
       super(source);
+      source.getLifecycle().addObserver(this);
     }
 
     @Override public void onStateChanged(LifecycleOwner source, Lifecycle.Event event) {
       lifecycleSubject.onNext(event);
       if (event == Lifecycle.Event.ON_DESTROY) {
-        TAG_LIFECYCLE_MAP.remove(getKey());
+        TAG_LIFECYCLE_MAP.remove(getKey(source));
         clear();
       }
     }
@@ -154,7 +155,6 @@ public class RxLifeHelper {
           if (lifeCycleMgr == null) {
             lifeCycleMgr = new InnerLifeCycleManager(lifecycleOwner);
             TAG_LIFECYCLE_MAP.put(key, lifeCycleMgr);
-            lifecycleOwner.getLifecycle().addObserver(lifeCycleMgr);
           }
         }
       }
@@ -168,10 +168,11 @@ public class RxLifeHelper {
       for (; ; ) {
         boolean set = atomic.compareAndSet(0, 1);
         if (set) {
-          final String key = getKey();
+          final String key = getKey(lifecycleOwner);
           // 绑定在执行结束，则这个减一
           if (!TAG_LIFECYCLE_MAP.containsKey(key)) {
             TAG_LIFECYCLE_MAP.put(key, this);
+            reset(lifecycleOwner);
           }
         }
         if (atomic.compareAndSet(1, 0)) {
