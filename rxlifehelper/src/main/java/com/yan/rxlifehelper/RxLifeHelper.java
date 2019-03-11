@@ -134,7 +134,7 @@ public class RxLifeHelper {
     @Override public void onStateChanged(LifecycleOwner source, Lifecycle.Event event) {
       lifecycleSubject.onNext(event);
       if (event == Lifecycle.Event.ON_DESTROY) {
-        TAG_LIFECYCLE_MAP.remove(source.getClass().getName());
+        TAG_LIFECYCLE_MAP.remove(getKey());
         clear();
       }
     }
@@ -143,7 +143,7 @@ public class RxLifeHelper {
         Lifecycle.Event event) {
       // 绑定在执行，则这个加1
 
-      final String key = lifecycleOwner.getClass().getName();
+      final String key = GenericLifecycleObserver.getKey(lifecycleOwner);
       InnerLifeCycleManager lifeCycleMgr = TAG_LIFECYCLE_MAP.get(key);
 
       // 多线程的情况下，保证InnerLifeCycleManager不会创建多个，

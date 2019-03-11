@@ -43,6 +43,10 @@ abstract class GenericLifecycleObserver implements LifecycleObserver {
   }
 
   String getKey() {
-    return source.getClass().getName();
+    return getKey(source);
+  }
+
+  static String getKey(Object object) {
+    return object.toString();
   }
 }

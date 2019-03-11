@@ -15,6 +15,7 @@ import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.reactivestreams.Subscription;
 
 public class MainActivity extends AppCompatActivity {
@@ -26,8 +27,10 @@ public class MainActivity extends AppCompatActivity {
 
   @Override protected void onResume() {
     super.onResume();
+    final AtomicInteger atomicInteger = new AtomicInteger();
+
     final long start = System.currentTimeMillis();
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 100; i++) {
       final int finalI = i;
       Single.timer(1000, TimeUnit.MILLISECONDS)
           .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
@@ -36,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
             @Override public void accept(Long aLong) throws Exception {
               Log.e("RxLifeHelper", "interval ---------");
               Observable.just(finalI)
+                  .subscribeOn(Schedulers.newThread())
                   .compose(RxLifeHelper.<Integer>bindUntilLifeEvent(MainActivity.this,
                       Lifecycle.Event.ON_PAUSE))
                   .subscribe(new Observer<Integer>() {
@@ -44,7 +48,12 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override public void onNext(Integer integer) {
-                      Log.e("onSubscribe", "onNext: " + integer + "   ");
+                      Log.e("onSubscribe", "onNext: "
+                          + integer
+                          + "   "
+                          + atomicInteger.incrementAndGet()
+                          + "   "
+                          + Thread.currentThread().getName());
                     }
 
                     @Override public void onError(Throwable e) {
@@ -79,6 +88,12 @@ public class MainActivity extends AppCompatActivity {
     // 1111111111111 将不会 被打印
     getData("111111111111111111111111111111");
     getData("222222222222222222222222222222");
+
+    for (int i = 0; i < 50; i++) {
+      getSupportFragmentManager().beginTransaction()
+          .add(R.id.fl_fragment, new MainFragment(), i + "")
+          .commit();
+    }
   }
 
   private void getData(final String data) {

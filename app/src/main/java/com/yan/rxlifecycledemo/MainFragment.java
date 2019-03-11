@@ -13,7 +13,9 @@ import android.widget.TextView;
 import com.yan.rxlifehelper.RxLifeHelper;
 import io.reactivex.Observable;
 import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainFragment extends Fragment {
 
@@ -26,13 +28,24 @@ public class MainFragment extends Fragment {
   @Override public void onResume() {
     super.onResume();
 
+    final AtomicInteger atomicInteger = new AtomicInteger();
+
     // onPause 自动取消
-    Observable.interval(1000, TimeUnit.MILLISECONDS)
-        .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
-        .subscribe(new Consumer<Long>() {
-          @Override public void accept(Long aLong) throws Exception {
-            Log.e("RxLifeHelper", "MainFragment interval ---------");
-          }
-        });
+    for (int i = 0; i < 50; i++) {
+      final int finalI = i;
+      Observable.timer(1500, TimeUnit.MILLISECONDS)
+          .subscribeOn(Schedulers.newThread())
+          .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
+          .subscribe(new Consumer<Long>() {
+            @Override public void accept(Long aLong) throws Exception {
+              Log.e("RxLifeHelper", "MainFragment interval ---------   value "
+                  + finalI
+                  + "    "
+                  + atomicInteger.incrementAndGet()
+                  + "    "
+                  + Thread.currentThread().getName());
+            }
+          });
+    }
   }
 }
