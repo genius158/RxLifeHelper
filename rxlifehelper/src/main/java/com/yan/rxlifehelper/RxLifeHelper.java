@@ -97,7 +97,7 @@ public class RxLifeHelper {
           @Override public void run() {
             //确定没有在执行绑定，同时没有绑定对象
             if (!lifecycleSubject.hasObservers()) {
-              InnerLifeCycleManager mgr = null;
+              InnerLifeCycleManager mgr;
               String key = getKey();
               for (; ; ) {
                 if (lifecycleSubject.hasObservers()) {
