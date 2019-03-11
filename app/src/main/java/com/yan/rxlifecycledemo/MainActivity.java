@@ -35,9 +35,9 @@ public class MainActivity extends AppCompatActivity {
     for (int i = 0; i < 100; i++) {
       final int finalI = i;
       Single.timer(0, TimeUnit.MILLISECONDS)
-          //.compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
+          .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
           .subscribeOn(Schedulers.newThread())
-          .as(AutoDispose.<Long>autoDisposable(AndroidLifecycleScopeProvider.from(this)))
+          //.as(AutoDispose.<Long>autoDisposable(AndroidLifecycleScopeProvider.from(this)))
           .subscribe(new Consumer<Long>() {
             @Override public void accept(Long aLong) throws Exception {
               Log.e("RxLifeHelper", "interval ---------");
