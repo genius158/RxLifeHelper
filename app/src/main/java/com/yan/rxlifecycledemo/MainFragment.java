@@ -31,9 +31,9 @@ public class MainFragment extends Fragment {
     final AtomicInteger atomicInteger = new AtomicInteger();
 
     // onPause 自动取消
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 500; i++) {
       final int finalI = i;
-      Observable.timer(1500, TimeUnit.MILLISECONDS)
+      Observable.timer(0, TimeUnit.MILLISECONDS)
           .subscribeOn(Schedulers.newThread())
           .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
           .subscribe(new Consumer<Long>() {

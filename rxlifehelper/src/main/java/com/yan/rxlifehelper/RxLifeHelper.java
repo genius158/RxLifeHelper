@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class RxLifeHelper {
   private static final HashMap<String, InnerLifeCycleManager> TAG_LIFECYCLE_MAP = new HashMap<>();
+  private static final AtomicInteger MAP_ATOMIC = new AtomicInteger();
 
   /**
    * 处理tag 发送事件形式的绑定处理
@@ -88,7 +89,8 @@ public class RxLifeHelper {
   /**
    * 生命周期管理, 生命周期各个阶段分发
    */
-  private static class InnerLifeCycleManager extends GenericLifecycleObserver {
+  private static class InnerLifeCycleManager extends AtomicLifecycleObserver {
+
     /**
      * BehaviorSubject 绑定，即会发送一次最新数据
      */
@@ -100,87 +102,97 @@ public class RxLifeHelper {
               InnerLifeCycleManager mgr;
               String key = getKey();
               for (; ; ) {
-                if (lifecycleSubject.hasObservers()) {
-                  break;
-                }
-                boolean set = atomic.compareAndSet(0, 2);
-                if (set) {
-                  if (lifecycleSubject.hasObservers()) {
-                    break;
+                boolean mapOp = MAP_ATOMIC.compareAndSet(0, 1);
+                if (mapOp) {
+                  boolean set = compareAndSet(0, 1);
+                  if (set) {
+                    if (isDestroy) {
+                      break;
+                    }
+
+                    mgr = TAG_LIFECYCLE_MAP.remove(key);
+                    if (mgr != null) {
+                      mgr.clear();
+                    }
                   }
-                  mgr = TAG_LIFECYCLE_MAP.remove(key);
-                  if (mgr != null) {
-                    mgr.clear();
+                  compareAndSet(1, 0);
+                  if (MAP_ATOMIC.compareAndSet(1, 0)) {
+                    return;
                   }
-                }
-                if (atomic.compareAndSet(2, 0)) {
-                  break;
                 }
               }
             }
           }
         });
 
-    /**
-     * 判断当前状态
-     * 0.正常 1.add 2.remove
-     */
-    private AtomicInteger atomic = new AtomicInteger();
-
     private InnerLifeCycleManager(LifecycleOwner source) {
       super(source);
-      source.getLifecycle().addObserver(this);
     }
+
+    boolean isDestroy = false;
 
     @Override public void onStateChanged(LifecycleOwner source, Lifecycle.Event event) {
       lifecycleSubject.onNext(event);
 
       if (event == Lifecycle.Event.ON_DESTROY) {
-        TAG_LIFECYCLE_MAP.remove(getKey(source));
-        clear();
+        isDestroy = true;
+        for (; ; ) {
+          boolean set = compareAndSet(0, 1);
+          if (set) {
+            clear();
+            TAG_LIFECYCLE_MAP.remove(getKey(source));
+            if (compareAndSet(1, 0)) {
+              break;
+            }
+          }
+        }
       }
     }
 
     private static <T> LifecycleTransformer<T> bind(LifecycleOwner lifecycleOwner,
         Lifecycle.Event event) {
-      // 绑定在执行，则这个加1
-
       final String key = getKey(lifecycleOwner);
       InnerLifeCycleManager lifeCycleMgr = TAG_LIFECYCLE_MAP.get(key);
 
       // 多线程的情况下，保证InnerLifeCycleManager不会创建多个，
       // 否则后面创建的会覆盖前面的记录
       if (lifeCycleMgr == null) {
-        synchronized (RxLifeHelper.class) {
-          lifeCycleMgr = TAG_LIFECYCLE_MAP.get(key);
-          if (lifeCycleMgr == null) {
-            lifeCycleMgr = new InnerLifeCycleManager(lifecycleOwner);
-            TAG_LIFECYCLE_MAP.put(key, lifeCycleMgr);
+        for (; ; ) {
+          boolean mapOp = MAP_ATOMIC.compareAndSet(0, 1);
+          if (mapOp) {
+            lifeCycleMgr = TAG_LIFECYCLE_MAP.get(key);
+            if (lifeCycleMgr == null) {
+              lifeCycleMgr = new InnerLifeCycleManager(lifecycleOwner);
+              return lifeCycleMgr.put2Map(lifecycleOwner, event);
+            }
+            if (MAP_ATOMIC.compareAndSet(1, 0)) {
+              break;
+            }
           }
         }
       }
-      return lifeCycleMgr.bindInner(event, lifecycleOwner);
+      return lifeCycleMgr.put2Map(lifecycleOwner, event);
     }
 
-    private <T> LifecycleTransformer<T> bindInner(Lifecycle.Event event,
-        LifecycleOwner lifecycleOwner) {
-      LifecycleTransformer<T> lifecycleTransformer =
-          RxLifecycle.bindUntilEvent(lifecycleSubject, event);
+    private <T> LifecycleTransformer<T> put2Map(LifecycleOwner lifecycleOwner,
+        Lifecycle.Event event) {
+      final String key = getKey(lifecycleOwner);
       for (; ; ) {
-        boolean set = atomic.compareAndSet(0, 1);
+        boolean set = compareAndSet(0, 1);
         if (set) {
-          final String key = getKey(lifecycleOwner);
-          // 绑定在执行结束，则这个减一
+          if (isDestroy) {
+            break;
+          }
           if (!TAG_LIFECYCLE_MAP.containsKey(key)) {
             TAG_LIFECYCLE_MAP.put(key, this);
-            reset(lifecycleOwner);
+          }
+          reset(lifecycleOwner);
+          if (compareAndSet(1, 0)) {
+            break;
           }
         }
-        if (atomic.compareAndSet(1, 0)) {
-          break;
-        }
       }
-      return lifecycleTransformer;
+      return RxLifecycle.bindUntilEvent(lifecycleSubject, event);
     }
 
     void clear() {

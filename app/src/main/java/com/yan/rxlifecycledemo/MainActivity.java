@@ -30,7 +30,7 @@ public class MainActivity extends AppCompatActivity {
     final AtomicInteger atomicInteger = new AtomicInteger();
 
     final long start = System.currentTimeMillis();
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1000; i++) {
       final int finalI = i;
       Single.timer(0, TimeUnit.MILLISECONDS)
           .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
@@ -72,24 +72,24 @@ public class MainActivity extends AppCompatActivity {
           });
     }
 
-    //Observable.interval(1000, TimeUnit.MILLISECONDS)
-    //    .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
-    //    .subscribeOn(Schedulers.io())
-    //    .subscribe(new Consumer<Long>() {
-    //      @Override public void accept(Long aLong) throws Exception {
-    //        Log.e("RxLifeHelper", "interval ---------");
-    //      }
-    //    }, new Consumer<Throwable>() {
-    //      @Override public void accept(Throwable throwable) throws Exception {
-    //        Log.e("getData", "accept: " + throwable);
-    //      }
-    //    });
-    //
-    //// 1111111111111 将不会 被打印
-    //getData("111111111111111111111111111111");
-    //getData("222222222222222222222222222222");
-    //
-    //for (int i = 0; i < 50; i++) {
+    Observable.interval(1000, TimeUnit.MILLISECONDS)
+        .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
+        .subscribeOn(Schedulers.io())
+        .subscribe(new Consumer<Long>() {
+          @Override public void accept(Long aLong) throws Exception {
+            Log.e("RxLifeHelper", "interval ---------");
+          }
+        }, new Consumer<Throwable>() {
+          @Override public void accept(Throwable throwable) throws Exception {
+            Log.e("getData", "accept: " + throwable);
+          }
+        });
+
+    // 1111111111111 将不会 被打印
+    getData("111111111111111111111111111111");
+    getData("222222222222222222222222222222");
+
+    //for (int i = 0; i < 1; i++) {
     //  getSupportFragmentManager().beginTransaction()
     //      .add(R.id.fl_fragment, new MainFragment(), i + "")
     //      .commit();
