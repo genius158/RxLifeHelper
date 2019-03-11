@@ -4,12 +4,11 @@ import android.arch.lifecycle.Lifecycle;
 import android.arch.lifecycle.LifecycleObserver;
 import android.arch.lifecycle.LifecycleOwner;
 import android.arch.lifecycle.OnLifecycleEvent;
-import java.util.concurrent.atomic.AtomicInteger;
 
-abstract class AtomicLifecycleObserver extends AtomicInteger implements LifecycleObserver {
+abstract class GenericLifecycleObserver implements LifecycleObserver {
   LifecycleOwner source;
 
-  AtomicLifecycleObserver(LifecycleOwner source) {
+  GenericLifecycleObserver(LifecycleOwner source) {
     this.source = source;
   }
 
