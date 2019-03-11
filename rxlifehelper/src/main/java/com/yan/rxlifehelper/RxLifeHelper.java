@@ -1,10 +1,10 @@
 package com.yan.rxlifehelper;
 
-import android.arch.lifecycle.Lifecycle;
-import android.arch.lifecycle.LifecycleOwner;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
 import android.content.Context;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
 import io.reactivex.Observable;
 import io.reactivex.functions.Predicate;
 import io.reactivex.subjects.PublishSubject;
@@ -154,6 +154,7 @@ public class RxLifeHelper {
           if (lifeCycleMgr == null) {
             lifeCycleMgr = new InnerLifeCycleManager(lifecycleOwner);
             TAG_LIFECYCLE_MAP.put(key, lifeCycleMgr);
+            lifecycleOwner.getLifecycle().addObserver(lifeCycleMgr);
           }
         }
       }
@@ -173,7 +174,6 @@ public class RxLifeHelper {
             TAG_LIFECYCLE_MAP.put(key, this);
           }
         }
-        lifecycleOwner.getLifecycle().addObserver(this);
         if (atomic.compareAndSet(1, 0)) {
           break;
         }
