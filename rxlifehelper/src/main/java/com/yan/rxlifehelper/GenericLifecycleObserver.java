@@ -6,7 +6,7 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.OnLifecycleEvent;
 
 abstract class GenericLifecycleObserver implements LifecycleObserver {
-  private LifecycleOwner source;
+  LifecycleOwner source;
 
   GenericLifecycleObserver(LifecycleOwner source) {
     this.source = source;
@@ -37,27 +37,4 @@ abstract class GenericLifecycleObserver implements LifecycleObserver {
   }
 
   abstract void onStateChanged(final LifecycleOwner source, Lifecycle.Event event);
-
-  void clear() {
-    source.getLifecycle().removeObserver(this);
-    source = null;
-  }
-
-  void reset(LifecycleOwner lifecycleOwner) {
-    if (source == null) {
-      source = lifecycleOwner;
-      source.getLifecycle().addObserver(this);
-    }
-  }
-
-  String getKey() {
-    return getKey(source);
-  }
-
-  static String getKey(Object object) {
-    if (object == null) {
-      return "null";
-    }
-    return object.toString();
-  }
 }

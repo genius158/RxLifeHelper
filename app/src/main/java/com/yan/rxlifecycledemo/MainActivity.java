@@ -32,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
     final AtomicInteger atomicInteger = new AtomicInteger();
 
     final long start = System.currentTimeMillis();
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1000; i++) {
       final int finalI = i;
       Single.timer(0, TimeUnit.MILLISECONDS)
           .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
