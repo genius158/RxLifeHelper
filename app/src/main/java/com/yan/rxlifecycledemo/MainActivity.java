@@ -33,10 +33,9 @@ public class MainActivity extends AppCompatActivity {
     final long start = System.currentTimeMillis();
     for (int i = 0; i < 1000; i++) {
       final int finalI = i;
-      Single.timer(0, TimeUnit.MILLISECONDS)
+      Flowable.timer(0, TimeUnit.MILLISECONDS)
           .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
           .subscribeOn(Schedulers.io())
-          .observeOn(AndroidSchedulers.mainThread())
           .subscribe(new Consumer<Long>() {
             @Override public void accept(Long aLong) throws Exception {
               Log.e("RxLifeHelper", "interval ---------");
