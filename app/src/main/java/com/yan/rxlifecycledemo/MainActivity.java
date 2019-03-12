@@ -10,6 +10,7 @@ import io.reactivex.FlowableSubscriber;
 import io.reactivex.Observable;
 import io.reactivex.Observer;
 import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
@@ -32,14 +33,16 @@ public class MainActivity extends AppCompatActivity {
     final long start = System.currentTimeMillis();
     for (int i = 0; i < 1000; i++) {
       final int finalI = i;
-      Single.timer(1000, TimeUnit.MILLISECONDS)
+      Single.timer(0, TimeUnit.MILLISECONDS)
           .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
           .subscribeOn(Schedulers.io())
+          .observeOn(AndroidSchedulers.mainThread())
           .subscribe(new Consumer<Long>() {
             @Override public void accept(Long aLong) throws Exception {
               Log.e("RxLifeHelper", "interval ---------");
               Observable.just(finalI)
                   .subscribeOn(Schedulers.newThread())
+                  .observeOn(AndroidSchedulers.mainThread())
                   .compose(RxLifeHelper.<Integer>bindUntilLifeEvent(MainActivity.this,
                       Lifecycle.Event.ON_PAUSE))
                   .subscribe(new Observer<Integer>() {
