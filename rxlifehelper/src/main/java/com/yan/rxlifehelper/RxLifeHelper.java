@@ -3,6 +3,7 @@ package com.yan.rxlifehelper;
 import android.arch.lifecycle.Lifecycle;
 import android.arch.lifecycle.LifecycleOwner;
 import android.content.Context;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import io.reactivex.Observable;
@@ -20,7 +21,8 @@ import java.util.HashMap;
  * @author yanxianwei
  */
 public class RxLifeHelper {
-  private static final HashMap<String, InnerLifeCycleManager> TAG_LIFECYCLE_MAP = new HashMap<>();
+  private static volatile HashMap<String, InnerLifeCycleManager> TAG_LIFECYCLE_MAP =
+      new HashMap<>();
 
   /**
    * 处理tag 发送事件形式的绑定处理
@@ -74,6 +76,9 @@ public class RxLifeHelper {
     if (lifecycleOwner == null) {
       return bindErrorEvent(new NullPointerException("RxLifeHelper: target could not be null"));
     }
+    if (lifecycleOwner.getLifecycle() == null) {
+      return bindErrorEvent(new NullPointerException("RxLifeHelper: lifecycle could not be null"));
+    }
     if (lifecycleOwner.getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED) {
       return bindErrorEvent(new NullPointerException("RxLifeHelper: lifecycle owner is destroy"));
     }
@@ -85,14 +90,11 @@ public class RxLifeHelper {
     return RxLifecycle.bind(Observable.error(throwable));
   }
 
-  private static InnerLifeCycleManager getLifeManager(LifecycleOwner lifecycleOwner) {
-    if (lifecycleOwner == null) {
-      return null;
-    }
+  private static InnerLifeCycleManager getLifeManager(@NonNull LifecycleOwner lifecycleOwner) {
     String key = lifecycleOwner.toString();
     InnerLifeCycleManager lifeCycleManager = TAG_LIFECYCLE_MAP.get(key);
     if (lifeCycleManager == null) {
-      synchronized (RxLifeHelper.class) {
+      synchronized (key.intern()) {
         lifeCycleManager = TAG_LIFECYCLE_MAP.get(key);
         if (lifeCycleManager == null) {
           lifeCycleManager = new InnerLifeCycleManager(lifecycleOwner);
