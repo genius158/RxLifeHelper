@@ -1,10 +1,10 @@
 # RxLifeHelper
 
-### implementation 'com.yan:rxlifehelper:1.2.4'
+### implementation 'com.yan:rxlifehelper:1.2.5'
 
 冲突，尝试
 <br/>
-implementation('com.yan:rxlifehelper:1.2.4'){
+implementation('com.yan:rxlifehelper:1.2.5'){
 <br/> exclude group: 'com.android.support'
 <br/> exclude group: 'io.reactivex.rxjava2'
 <br/> }
@@ -49,3 +49,5 @@ public class MainActivity extends AppCompatActivity {
   }
 }
 ```
+### change log: 
+version 1.2.5: 添加bindUntilActivityDetach(rootView 的 OnAttachStateChangeListener 实现) 弥补普通的activity没有lifeCircle，无法实现compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_DESTROY))

@@ -5,7 +5,7 @@ publish {
   userOrg = 'yan157'
   groupId = 'com.yan'
   artifactId = 'rxlifehelper'
-  publishVersion = '1.2.4'
+  publishVersion = '1.2.5'
   desc = ""
   website = 'https://github.com/genius158/RxLifeHelper'
 }
@@ -14,7 +14,7 @@ android {
   compileSdkVersion 28
 
   defaultConfig {
-    minSdkVersion 11
+    minSdkVersion 14
     targetSdkVersion 28
     versionCode 1
     versionName "1.0"

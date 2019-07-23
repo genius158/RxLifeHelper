@@ -1,12 +1,16 @@
 package com.yan.rxlifehelper;
 
+import android.app.Activity;
 import android.arch.lifecycle.Lifecycle;
 import android.arch.lifecycle.LifecycleOwner;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
+import android.view.View;
 import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.functions.Predicate;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.PublishSubject;
@@ -50,6 +54,27 @@ public class RxLifeHelper {
 
   public static void sendFilterTag(String tag) {
     TAG_EVENT_SUBJECT.onNext(tag);
+  }
+
+  public static <T> LifecycleTransformer<T> bindUntilActivityDetach(final Activity activity) {
+    if (activity == null || activity.getWindow() == null || activity.isFinishing()) {
+      return bindErrorEvent(new IllegalStateException("activity status not good"));
+    }
+    return RxLifecycle.bind(Observable.create(new ObservableOnSubscribe<Object>() {
+      @Override public void subscribe(final ObservableEmitter<Object> emitter) throws Exception {
+        activity.getWindow()
+            .getDecorView()
+            .addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+              @Override public void onViewAttachedToWindow(View v) {
+              }
+
+              @Override public void onViewDetachedFromWindow(View v) {
+                v.removeOnAttachStateChangeListener(this);
+                emitter.onNext(new Object());
+              }
+            });
+      }
+    }));
   }
 
   public static <T> LifecycleTransformer<T> bindUntilLifeEvent(FragmentActivity target,
