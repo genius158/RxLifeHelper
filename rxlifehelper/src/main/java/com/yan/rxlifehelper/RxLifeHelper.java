@@ -4,13 +4,13 @@ import android.app.Activity;
 import android.arch.lifecycle.Lifecycle;
 import android.arch.lifecycle.LifecycleOwner;
 import android.content.Context;
+import android.support.annotation.MainThread;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import io.reactivex.Observable;
-import io.reactivex.ObservableEmitter;
-import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.functions.Action;
 import io.reactivex.functions.Predicate;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.PublishSubject;
@@ -60,34 +60,37 @@ public class RxLifeHelper {
     if (activity == null || activity.getWindow() == null || activity.isFinishing()) {
       return bindErrorEvent(new IllegalStateException("activity status not good"));
     }
-    return RxLifecycle.bind(Observable.create(new ObservableOnSubscribe<Object>() {
-      @Override public void subscribe(final ObservableEmitter<Object> emitter) throws Exception {
-        activity.getWindow()
-            .getDecorView()
-            .addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-              @Override public void onViewAttachedToWindow(View v) {
-              }
+    final PublishSubject<Object> publishSubject = PublishSubject.create();
+    final View.OnAttachStateChangeListener stateChangeListener;
+    final View decor = activity.getWindow().getDecorView();
+    decor.addOnAttachStateChangeListener(
+        stateChangeListener = new View.OnAttachStateChangeListener() {
+          @Override public void onViewAttachedToWindow(View v) {
+          }
 
-              @Override public void onViewDetachedFromWindow(View v) {
-                v.removeOnAttachStateChangeListener(this);
-                emitter.onNext(new Object());
-              }
-            });
+          @Override public void onViewDetachedFromWindow(View v) {
+            v.removeOnAttachStateChangeListener(this);
+            publishSubject.onNext(new Object());
+          }
+        });
+    return RxLifecycle.bind(publishSubject.doFinally(new Action() {
+      @Override public void run() throws Exception {
+        decor.removeOnAttachStateChangeListener(stateChangeListener);
       }
     }));
   }
 
-  public static <T> LifecycleTransformer<T> bindUntilLifeEvent(FragmentActivity target,
+  @MainThread public static <T> LifecycleTransformer<T> bindUntilLifeEvent(FragmentActivity target,
       Lifecycle.Event event) {
     return bindLifeOwnerUntilEvent(target, event);
   }
 
-  public static <T> LifecycleTransformer<T> bindUntilLifeEvent(Fragment target,
+  @MainThread public static <T> LifecycleTransformer<T> bindUntilLifeEvent(Fragment target,
       Lifecycle.Event event) {
     return bindLifeOwnerUntilEvent(target, event);
   }
 
-  public static <T> LifecycleTransformer<T> bindUntilLifeEvent(Context target,
+  @MainThread public static <T> LifecycleTransformer<T> bindUntilLifeEvent(Context target,
       Lifecycle.Event event) {
     if (!(target instanceof LifecycleOwner)) {
       return bindErrorEvent(
@@ -96,6 +99,7 @@ public class RxLifeHelper {
     return bindLifeOwnerUntilEvent((LifecycleOwner) target, event);
   }
 
+  @MainThread
   public static <T> LifecycleTransformer<T> bindLifeOwnerUntilEvent(LifecycleOwner lifecycleOwner,
       Lifecycle.Event event) {
     if (lifecycleOwner == null) {
