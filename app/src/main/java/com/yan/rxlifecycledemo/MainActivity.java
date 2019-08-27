@@ -1,8 +1,8 @@
 package com.yan.rxlifecycledemo;
 
-import android.arch.lifecycle.Lifecycle;
+import androidx.lifecycle.Lifecycle;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import com.yan.rxlifehelper.RxLifeHelper;
 import io.reactivex.Flowable;
