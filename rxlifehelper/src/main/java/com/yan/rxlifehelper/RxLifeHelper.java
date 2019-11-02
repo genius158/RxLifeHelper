@@ -166,9 +166,9 @@ public class RxLifeHelper {
     }
 
     @Override public void onViewDetachedFromWindow(View v) {
+      lifecycleSubject.onNext(true);
       v.removeOnAttachStateChangeListener(this);
       v.setTag(R.id.tag_view_attach, null);
-      lifecycleSubject.onNext(true);
     }
   }
 }

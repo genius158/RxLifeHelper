@@ -45,3 +45,4 @@ public class MainActivity extends AppCompatActivity {
 ### change log: 
 version 1.2.6: 添加bindUntilActivityDetach(rootView 的 OnAttachStateChangeListener 实现) 弥补普通的activity没有lifeCircle，无法实现compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_DESTROY))
 version 1.2.7: androidx
+version 1.3.0: 增加bindUntilDetach 处理view detached 取消绑定
