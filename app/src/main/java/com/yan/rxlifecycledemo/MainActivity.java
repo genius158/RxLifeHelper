@@ -1,18 +1,16 @@
 package com.yan.rxlifecycledemo;
 
-import androidx.lifecycle.Lifecycle;
 import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.Lifecycle;
 import com.yan.rxlifehelper.RxLifeHelper;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableSubscriber;
 import io.reactivex.Observable;
-import io.reactivex.Observer;
 import io.reactivex.Single;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
+import io.reactivex.functions.BiConsumer;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 import java.util.concurrent.TimeUnit;
@@ -31,55 +29,40 @@ public class MainActivity extends AppCompatActivity {
     final AtomicInteger atomicInteger = new AtomicInteger();
 
     final long start = System.currentTimeMillis();
-    for (int i = 0; i < 1000; i++) {
-      final int finalI = i;
-      Flowable.timer(0, TimeUnit.MILLISECONDS)
-          .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
-          .subscribeOn(Schedulers.io())
-          .subscribe(new Consumer<Long>() {
-            @Override public void accept(Long aLong) throws Exception {
-              Log.e("RxLifeHelper", "interval ---------");
-              Observable.just(finalI)
-                  .subscribeOn(Schedulers.newThread())
-                  .observeOn(AndroidSchedulers.mainThread())
-                  .compose(RxLifeHelper.<Integer>bindUntilLifeEvent(MainActivity.this,
-                      Lifecycle.Event.ON_PAUSE))
-                  .subscribe(new Observer<Integer>() {
-                    @Override public void onSubscribe(Disposable d) {
-                      Log.e("onSubscribe", "onSubscribe: " + d.isDisposed());
-                    }
 
-                    @Override public void onNext(Integer integer) {
-                      Log.e("onSubscribe", "onNext: "
-                          + integer
-                          + "   "
-                          + atomicInteger.incrementAndGet()
-                          + "   "
-                          + Thread.currentThread().getName());
-                    }
+    Single.just(1)
+        .delay(1, TimeUnit.SECONDS)
+        .compose(RxLifeHelper.<Integer>bindUntilDetach(this))
+        .subscribe(new BiConsumer<Integer, Throwable>() {
+          @Override public void accept(Integer integer, Throwable throwable) throws Exception {
+            Log.e("RxLifeHelper", "BiConsumer111111 --------- " + throwable);
+          }
+        });
 
-                    @Override public void onError(Throwable e) {
-                      Log.e("onSubscribe", "onError: " + e);
-                    }
+    Single.just(1)
+        .delay(5, TimeUnit.SECONDS)
+        .compose(RxLifeHelper.<Integer>bindUntilDetach(this))
+        .subscribe(new BiConsumer<Integer, Throwable>() {
+          @Override public void accept(Integer integer, Throwable throwable) throws Exception {
+            Log.e("RxLifeHelper", "BiConsumer222222 --------- " + throwable);
+          }
+        });
 
-                    @Override public void onComplete() {
-                      Log.e("onSubscribe", "onComplete: " + (System.currentTimeMillis() - start));
-                    }
-                  });
-            }
-          }, new Consumer<Throwable>() {
-            @Override public void accept(Throwable throwable) throws Exception {
-              Log.e("getData", "accept: " + throwable);
-            }
-          });
-    }
+    Single.just(1)
+        .delay(10, TimeUnit.SECONDS)
+        .compose(RxLifeHelper.<Integer>bindUntilDetach(this))
+        .subscribe(new BiConsumer<Integer, Throwable>() {
+          @Override public void accept(Integer integer, Throwable throwable) throws Exception {
+            Log.e("RxLifeHelper", "BiConsumer3333333 --------- " + throwable);
+          }
+        });
 
     Observable.interval(1000, TimeUnit.MILLISECONDS)
         .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
         .subscribeOn(Schedulers.io())
         .subscribe(new Consumer<Long>() {
           @Override public void accept(Long aLong) throws Exception {
-            Log.e("RxLifeHelper", "interval ---------");
+            Log.e("RxLifeHelper", "interval --------- ");
           }
         }, new Consumer<Throwable>() {
           @Override public void accept(Throwable throwable) throws Exception {

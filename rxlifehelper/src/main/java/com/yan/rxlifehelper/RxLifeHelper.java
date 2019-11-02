@@ -1,16 +1,15 @@
 package com.yan.rxlifehelper;
 
 import android.app.Activity;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleOwner;
 import android.content.Context;
+import android.view.View;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
-import android.view.View;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
 import io.reactivex.Observable;
-import io.reactivex.functions.Action;
 import io.reactivex.functions.Predicate;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.PublishSubject;
@@ -56,28 +55,31 @@ public class RxLifeHelper {
     TAG_EVENT_SUBJECT.onNext(tag);
   }
 
-  public static <T> LifecycleTransformer<T> bindUntilActivityDetach(final Activity activity) {
+  public static <T> LifecycleTransformer<T> bindUntilDetach(final Activity activity) {
     if (activity == null || activity.getWindow() == null || activity.isFinishing()) {
       return bindErrorEvent(new IllegalStateException("activity status not good"));
     }
-    final PublishSubject<Object> publishSubject = PublishSubject.create();
-    final View.OnAttachStateChangeListener stateChangeListener;
-    final View decor = activity.getWindow().getDecorView();
-    decor.addOnAttachStateChangeListener(
-        stateChangeListener = new View.OnAttachStateChangeListener() {
-          @Override public void onViewAttachedToWindow(View v) {
-          }
+    return bindUntilDetach(activity.getWindow().getDecorView());
+  }
 
-          @Override public void onViewDetachedFromWindow(View v) {
-            v.removeOnAttachStateChangeListener(this);
-            publishSubject.onNext(new Object());
-          }
-        });
-    return RxLifecycle.bind(publishSubject.doFinally(new Action() {
-      @Override public void run() throws Exception {
-        decor.removeOnAttachStateChangeListener(stateChangeListener);
+  public static <T> LifecycleTransformer<T> bindUntilDetach(final View view) {
+    if (view == null) {
+      return bindErrorEvent(new IllegalStateException("view could not be null"));
+    }
+    View root = view.getRootView();
+    root = root == null ? view : view;
+    StateAttach stateAttach = (StateAttach) root.getTag(R.id.tag_view_attach);
+    if (stateAttach == null) {
+      synchronized (RxLifeHelper.class) {
+        stateAttach = (StateAttach) root.getTag(R.id.tag_view_attach);
+        if (stateAttach == null) {
+          stateAttach = new StateAttach();
+          root.addOnAttachStateChangeListener(stateAttach);
+          root.setTag(R.id.tag_view_attach, stateAttach);
+        }
       }
-    }));
+    }
+    return RxLifecycle.bind(stateAttach.lifecycleSubject);
   }
 
   @MainThread public static <T> LifecycleTransformer<T> bindUntilLifeEvent(FragmentActivity target,
@@ -154,6 +156,19 @@ public class RxLifeHelper {
         TAG_LIFECYCLE_MAP.remove(source.toString());
         source.getLifecycle().removeObserver(this);
       }
+    }
+  }
+
+  private static class StateAttach implements View.OnAttachStateChangeListener {
+    private final PublishSubject<Boolean> lifecycleSubject = PublishSubject.create();
+
+    @Override public void onViewAttachedToWindow(View v) {
+    }
+
+    @Override public void onViewDetachedFromWindow(View v) {
+      v.removeOnAttachStateChangeListener(this);
+      v.setTag(R.id.tag_view_attach, null);
+      lifecycleSubject.onNext(true);
     }
   }
 }
