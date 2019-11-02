@@ -67,7 +67,7 @@ public class RxLifeHelper {
       return bindErrorEvent(new IllegalStateException("view could not be null"));
     }
     View root = view.getRootView();
-    root = root == null ? view : view;
+    root = root == null ? view : root;
     StateAttach stateAttach = (StateAttach) root.getTag(R.id.tag_view_attach);
     if (stateAttach == null) {
       synchronized (RxLifeHelper.class) {
