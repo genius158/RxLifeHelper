@@ -1,6 +1,6 @@
 # RxLifeHelper
 
-### implementation 'com.yan:rxlifehelper:2.0.2'
+### implementation 'com.yan:rxlifehelper:2.0.5'
 
 ### demo
 
