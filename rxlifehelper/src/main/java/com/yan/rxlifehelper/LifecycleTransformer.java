@@ -37,7 +37,7 @@ import org.reactivestreams.Publisher;
 class LifecycleTransformer<T>
     implements ObservableTransformer<T, T>, FlowableTransformer<T, T>, SingleTransformer<T, T>,
     MaybeTransformer<T, T>, CompletableTransformer {
-  private final Observable<?> observable;
+  final Observable<?> observable;
 
   LifecycleTransformer(Observable<?> observable) {
     this.observable = observable;

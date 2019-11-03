@@ -14,6 +14,7 @@
 
 package com.yan.rxlifehelper;
 
+import androidx.lifecycle.LifecycleOwner;
 import io.reactivex.Observable;
 import io.reactivex.functions.Predicate;
 
@@ -41,6 +42,13 @@ class RxLifecycle {
     return bind(takeUntilEvent(lifecycle, event));
   }
 
+  static <T, R> LifecycleTransformer<T> bindUntilEvent(LifecycleOwner lifecycleOwner,
+      final Observable<R> lifecycle, final R event) {
+    checkNotNull(lifecycle, "lifecycle == null");
+    checkNotNull(event, "event == null");
+    return bind(lifecycleOwner, takeUntilEvent(lifecycle, event));
+  }
+
   private static <R> Observable<R> takeUntilEvent(final Observable<R> lifecycle, final R event) {
     return lifecycle.filter(new Predicate<R>() {
       @Override public boolean test(R lifecycleEvent) throws Exception {
@@ -62,5 +70,10 @@ class RxLifecycle {
    */
   static <T, R> LifecycleTransformer<T> bind(final Observable<R> lifecycle) {
     return new LifecycleTransformer<>(lifecycle);
+  }
+
+  private static <T, R> LifecycleTransformer<T> bind(LifecycleOwner lifecycleOwner,
+      final Observable<R> lifecycle) {
+    return new LifeDataTransformer<>(lifecycleOwner, lifecycle);
   }
 }
