@@ -1,4 +1,6 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-android'
 
 android {
     compileSdkVersion 28
@@ -30,4 +32,9 @@ dependencies {
   implementation 'io.reactivex.rxjava2:rxjava:2.2.3'
 //  implementation 'com.yan:rxlifehelper:1.0.3'
   implementation project(':rxlifehelper')
+  compile "androidx.core:core-ktx:+"
+  implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+}
+repositories {
+  mavenCentral()
 }
