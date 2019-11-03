@@ -7,7 +7,7 @@ publish {
   userOrg = 'yan157'
   groupId = 'com.yan'
   artifactId = 'rxlifehelper'
-  publishVersion = '2.0.5'
+  publishVersion = '2.0.6'
   desc = ""
   website = 'https://github.com/genius158/RxLifeHelper'
 }

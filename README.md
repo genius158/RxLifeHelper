@@ -1,6 +1,6 @@
 # RxLifeHelper
 
-### implementation 'com.yan:rxlifehelper:2.0.5'
+### implementation 'com.yan:rxlifehelper:2.0.6'
 
 ### demo
 
@@ -48,4 +48,4 @@ version 1.2.6: 添加bindUntilActivityDetach(rootView 的 OnAttachStateChangeLis
 <br/> version 1.3.1: 增加bindUntilDetach 处理view detached 取消绑定
 <br/> 
 <br/> version 2.0.2: 配置增加liveData 配和方式
-<br/> version 2.0.5: 增加协程扩展函数LifecycleOwner.launchLiveUntil、View.launchUntilDetach
+<br/> version 2.0.6: 增加协程扩展函数LifecycleOwner.launchLiveUntil、View.launchUntilDetach
