@@ -28,12 +28,13 @@ public final class LiveSingle<T> extends Single<T> {
     private final LifecycleOwner lifecycleOwner;
     Disposable ups;
 
-    LiveObserver(LifecycleOwner lifecycleOwner, final SingleObserver<? super T> downstream) {
+    LiveObserver(final LifecycleOwner lifecycleOwner, final SingleObserver<? super T> downstream) {
       this.downstream = downstream;
       this.lifecycleOwner = lifecycleOwner;
       liveDataObserver = new AbsLiveDataObserver<T>(lifecycleOwner) {
         @Override void onValue(T data) {
           downstream.onSuccess(data);
+          removeObserver(this);
         }
       };
     }
@@ -44,9 +45,7 @@ public final class LiveSingle<T> extends Single<T> {
     }
 
     @Override public void onSuccess(T data) {
-      if (!isDisposed()) {
-        liveDataObserver.onNext(data);
-      }
+      liveDataObserver.onNext(data);
     }
 
     @Override public void onError(Throwable e) {

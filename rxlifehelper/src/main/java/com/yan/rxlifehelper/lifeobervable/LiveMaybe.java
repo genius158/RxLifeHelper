@@ -44,9 +44,7 @@ public final class LiveMaybe<T> extends Maybe<T> {
     }
 
     @Override public void onSuccess(T data) {
-      if (!isDisposed()) {
-        liveDataObserver.onNext(data);
-      }
+      liveDataObserver.onNext(data);
     }
 
     @Override public void onError(Throwable e) {

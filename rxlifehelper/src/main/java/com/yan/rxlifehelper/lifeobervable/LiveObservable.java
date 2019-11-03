@@ -44,9 +44,7 @@ public final class LiveObservable<T> extends Observable<T> {
     }
 
     @Override public void onNext(T data) {
-      if (!isDisposed()) {
-        liveDataObserver.onNext(data);
-      }
+      liveDataObserver.onNext(data);
     }
 
     @Override public void onError(Throwable e) {
