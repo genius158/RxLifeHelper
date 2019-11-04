@@ -24,9 +24,23 @@ import kotlin.coroutines.resumeWithException
 /**
  * 结合OnAttachStateChangeListener实现自动释放
  */
+fun <T> View.launchUntilViewDetach(
+    context: CoroutineContext = Dispatchers.Main, exHandler: ((Throwable) -> Unit)? = null,
+    loader: suspend CoroutineScope.() -> T): Job = innerLaunchUntilViewDetach(this,context, exHandler, loader)
+
+
+/**
+ * 结合OnAttachStateChangeListener实现自动释放
+ */
 fun <T> View.launchUntilDetach(
     context: CoroutineContext = Dispatchers.Main, exHandler: ((Throwable) -> Unit)? = null,
+    loader: suspend CoroutineScope.() -> T): Job = innerLaunchUntilViewDetach(rootView, context,
+    exHandler, loader)
+
+private fun <T> innerLaunchUntilViewDetach(view: View,
+    context: CoroutineContext = Dispatchers.Main, exHandler: ((Throwable) -> Unit)? = null,
     loader: suspend CoroutineScope.() -> T): Job {
+
   var emitter: SingleEmitter<Any>? = null
   val handler = CoroutineExceptionHandler { _, _ -> }
   val job = GlobalScope.launch(handler + context) { loader() }
@@ -35,10 +49,10 @@ fun <T> View.launchUntilDetach(
       it.printStackTrace()
       exHandler?.invoke(it)
     }
-    emitter?.onSuccess(1)
+    if (emitter?.isDisposed == false) emitter?.onSuccess(1)
   }
 
-  Single.create<Any> { emitter = it }.compose(RxLifeHelper.bindUntilDetach<Any>(this))
+  Single.create<Any> { emitter = it }.compose(RxLifeHelper.bindUntilViewDetach<Any>(view))
       .subscribe(object : SingleObserver<Any> {
         override fun onSuccess(t: Any) {
           if (!job.isCancelled) job.cancel()
@@ -48,6 +62,7 @@ fun <T> View.launchUntilDetach(
         override fun onError(e: Throwable) = onSuccess(1)
       })
   return job
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
