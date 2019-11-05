@@ -1,6 +1,5 @@
 package com.yan.rxlifehelper
 
-import android.util.Log
 import android.view.View
 import androidx.lifecycle.Lifecycle.Event
 import androidx.lifecycle.Lifecycle.Event.ON_DESTROY
@@ -83,8 +82,6 @@ fun <T> LifecycleOwner.launchLiveUntil(
     wrapData(this, this@launchLiveUntil, event, deferred)
   }
   job.invokeOnCompletion {
-    Log.e("wrapData", "invokeOnCompletion invokeOnCompletion v " + it?.message)
-
     it?.let {
       it.printStackTrace()
       exHandler?.invoke(it)
@@ -109,6 +106,7 @@ private suspend fun <T> wrapData(scope: CoroutineScope, lifecycleOwner: Lifecycl
           override fun onError(e: Throwable) {
             continuation.resumeWithException(e)
           }
+
           override fun onSuccess(data: T) {
             if (!continuation.isCancelled) continuation.resume(data)
           }
