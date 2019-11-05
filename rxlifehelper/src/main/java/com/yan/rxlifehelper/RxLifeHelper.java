@@ -156,7 +156,7 @@ public class RxLifeHelper {
       return bindErrorEvent(new NullPointerException("RxLifeHelper: lifecycle owner is destroy"));
     }
     RxLifeHelper.InnerLifeCycleManager lifeCycleManager = getLifeManager(lifecycleOwner);
-    return RxLifecycle.bindUntilEvent(lifecycleOwner, lifeCycleManager.lifecycleSubject, event);
+    return RxLifecycle.bindUntilEvent(lifeCycleManager, lifeCycleManager.lifecycleSubject, event);
   }
 
   static <T> LifecycleTransformer<T> bindErrorEvent(Throwable throwable) {
@@ -205,7 +205,7 @@ public class RxLifeHelper {
       }
     }
 
-    LifecycleRegistry mLifecycleRegistry = new LifecycleRegistry(source);
+    private LifecycleRegistry mLifecycleRegistry = new LifecycleRegistry(source);
 
     @NonNull @Override public Lifecycle getLifecycle() {
       return mLifecycleRegistry;

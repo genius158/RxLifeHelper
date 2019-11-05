@@ -4,6 +4,8 @@ import androidx.lifecycle.LifecycleOwner;
 import io.reactivex.Maybe;
 import io.reactivex.MaybeObserver;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.internal.disposables.DisposableHelper;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author genius
@@ -22,46 +24,48 @@ public final class LiveMaybe<T> extends Maybe<T> {
     upstream.subscribe(new LiveObserver<>(lifecycleOwner, observer));
   }
 
-  static class LiveObserver<T> implements MaybeObserver<T>, Disposable {
-    final MaybeObserver<? super T> downstream;
-    final AbsLiveDataObserver<T> liveDataObserver;
+  static class LiveObserver<T> extends AbsLiveDataObserver<T>
+      implements MaybeObserver<T>, Disposable {
+    private final MaybeObserver<? super T> downstream;
     private LifecycleOwner lifecycleOwner;
-    Disposable upstream;
+    private final AtomicReference<Disposable> upstream = new AtomicReference<>();
 
     LiveObserver(LifecycleOwner lifecycleOwner, final MaybeObserver<? super T> downstream) {
+      super(lifecycleOwner);
       this.downstream = downstream;
       this.lifecycleOwner = lifecycleOwner;
-      liveDataObserver = new AbsLiveDataObserver<T>(lifecycleOwner) {
-        @Override void onValue(T data) {
-          downstream.onSuccess(data);
-        }
-      };
     }
 
     @Override public void onSubscribe(Disposable d) {
-      upstream = d;
+      DisposableHelper.setOnce(this.upstream, d);
       downstream.onSubscribe(this);
     }
 
     @Override public void onSuccess(T data) {
-      liveDataObserver.onNext(data);
+      onLiveNext(data);
     }
 
     @Override public void onError(Throwable e) {
+      removeObservers(lifecycleOwner);
       downstream.onError(e);
     }
 
     @Override public void onComplete() {
-
+      removeObservers(lifecycleOwner);
+      downstream.onComplete();
     }
 
     @Override public void dispose() {
-      upstream.dispose();
-      liveDataObserver.removeObservers(lifecycleOwner);
+      removeObservers(lifecycleOwner);
+      DisposableHelper.dispose(upstream);
     }
 
-    @Override public boolean isDisposed() {
-      return upstream.isDisposed();
+    @Override public final boolean isDisposed() {
+      return upstream.get() == DisposableHelper.DISPOSED;
+    }
+
+    @Override public void onChanged(T data) {
+      downstream.onSuccess(data);
     }
   }
 }

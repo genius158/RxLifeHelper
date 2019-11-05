@@ -8,11 +8,11 @@ import com.yan.rxlifehelper.RxLifeHelper;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableSubscriber;
 import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import io.reactivex.Single;
 import io.reactivex.functions.Action;
-import io.reactivex.functions.BiConsumer;
 import io.reactivex.functions.Consumer;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.functions.Function;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.reactivestreams.Subscription;
@@ -30,43 +30,57 @@ public class MainActivity extends AppCompatActivity {
 
     final long start = System.currentTimeMillis();
 
-    Single.just(1)
-        .delay(1, TimeUnit.SECONDS)
-        .compose(RxLifeHelper.<Integer>bindUntilDetach(this))
-        .subscribe(new BiConsumer<Integer, Throwable>() {
-          @Override public void accept(Integer integer, Throwable throwable) throws Exception {
-            Log.e("RxLifeHelper", "BiConsumer111111 --------- " + throwable);
+    //Flowable.create(new FlowableOnSubscribe<Object>() {
+    //  @Override public void subscribe(final FlowableEmitter<Object> emitter) throws Exception {
+    //    Single.timer(2000, TimeUnit.MILLISECONDS).subscribe(new BiConsumer<Long, Throwable>() {
+    //      @Override public void accept(Long aLong, Throwable throwable) throws Exception {
+    //        emitter.onError(new Exception("E"));
+    //        Log.e("onNext", " " + "E");
+    //      }
+    //    });
+    //    Observable.interval(200, TimeUnit.MILLISECONDS).subscribe(new Consumer<Long>() {
+    //      @Override public void accept(Long aLong) throws Exception {
+    //        emitter.onNext(aLong);
+    //      }
+    //    });
+    //  }
+    //}, BackpressureStrategy.BUFFER)
+    //    .compose(RxLifeHelper.bindUntilLifeLiveEvent(this, Lifecycle.Event.ON_DESTROY))
+    //    .subscribe(new FlowableSubscriber<Object>() {
+    //  @Override public void onSubscribe(Subscription s) {
+    //    s.request(Integer.MAX_VALUE);
+    //  }
+    //
+    //  @Override public void onNext(Object o) {
+    //    Log.e("onNext", "" + o);
+    //  }
+    //
+    //  @Override public void onError(Throwable t) {
+    //
+    //  }
+    //
+    //  @Override public void onComplete() {
+    //
+    //  }
+    //});
+    final int[] num = new int[] { 0 };
+    Observable.interval(200, TimeUnit.MILLISECONDS)
+        .flatMap(new Function<Long, ObservableSource<?>>() {
+          @Override public ObservableSource<?> apply(Long aLong) throws Exception {
+            if (num[0]++ > 20) {
+             return Observable.error(new Exception("wewe"));
+            }
+            return Observable.just(num[0]);
           }
-        });
-
-    Single.just(1)
-        .delay(5, TimeUnit.SECONDS)
-        .compose(RxLifeHelper.<Integer>bindUntilDetach(this))
-        .subscribe(new BiConsumer<Integer, Throwable>() {
-          @Override public void accept(Integer integer, Throwable throwable) throws Exception {
-            Log.e("RxLifeHelper", "BiConsumer222222 --------- " + throwable);
-          }
-        });
-
-    Single.just(1)
-        .delay(10, TimeUnit.SECONDS)
-        .compose(RxLifeHelper.<Integer>bindUntilDetach(this))
-        .subscribe(new BiConsumer<Integer, Throwable>() {
-          @Override public void accept(Integer integer, Throwable throwable) throws Exception {
-            Log.e("RxLifeHelper", "BiConsumer3333333 --------- " + throwable);
-          }
-        });
-
-    Observable.interval(1000, TimeUnit.MILLISECONDS)
-        .compose(RxLifeHelper.<Long>bindUntilLifeEvent(this, Lifecycle.Event.ON_PAUSE))
-        .subscribeOn(Schedulers.io())
-        .subscribe(new Consumer<Long>() {
-          @Override public void accept(Long aLong) throws Exception {
-            Log.e("RxLifeHelper", "interval --------- ");
+        })
+        .compose(RxLifeHelper.bindUntilLifeLiveEvent(this, Lifecycle.Event.ON_DESTROY))
+        .subscribe(new Consumer<Object>() {
+          @Override public void accept(Object o) throws Exception {
+            Log.e("onNext", "" + o);
           }
         }, new Consumer<Throwable>() {
           @Override public void accept(Throwable throwable) throws Exception {
-            Log.e("getData", "accept: " + throwable);
+            Log.e("onNext", "" + throwable.getMessage());
           }
         });
 

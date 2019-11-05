@@ -30,7 +30,7 @@ abstract class AbsLiveDataObserver<T> extends LiveData<T> implements Observer<T>
     realOnNext();
   }
 
-  void onNext(T data) {
+  void onLiveNext(T data) {
     isExecute = true;
     this.data = data;
     realOnNext();
@@ -46,12 +46,6 @@ abstract class AbsLiveDataObserver<T> extends LiveData<T> implements Observer<T>
       }
     }
   }
-
-  @Override public void onChanged(T data) {
-    onValue(data);
-  }
-
-  abstract void onValue(T data);
 
   @Override public void removeObservers(@NonNull final LifecycleOwner owner) {
     if (isMain()) {

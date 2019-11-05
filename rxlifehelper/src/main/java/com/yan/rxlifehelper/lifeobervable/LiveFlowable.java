@@ -2,6 +2,10 @@ package com.yan.rxlifehelper.lifeobervable;
 
 import androidx.lifecycle.LifecycleOwner;
 import io.reactivex.Flowable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.internal.subscriptions.SubscriptionHelper;
+import io.reactivex.internal.util.EndConsumerHelper;
+import java.util.concurrent.atomic.AtomicReference;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -22,45 +26,56 @@ public final class LiveFlowable<T> extends Flowable<T> {
     upstream.subscribe(new LiveObserver<>(lifecycleOwner, observer));
   }
 
-  static class LiveObserver<T> implements Subscriber<T>, Subscription {
-    final Subscriber<? super T> downstream;
-    final AbsLiveDataObserver<T> liveDataObserver;
-    final LifecycleOwner lifecycleOwner;
-    Subscription upstream;
+  static class LiveObserver<T> extends AbsLiveDataObserver<T>
+      implements Subscriber<T>, Subscription, Disposable {
+    private final Subscriber<? super T> downstream;
+    private final LifecycleOwner lifecycleOwner;
+    private final AtomicReference<Subscription> upstream = new AtomicReference<>();
 
     LiveObserver(LifecycleOwner lifecycleOwner, final Subscriber<? super T> downstream) {
+      super(lifecycleOwner);
       this.downstream = downstream;
       this.lifecycleOwner = lifecycleOwner;
-      liveDataObserver = new AbsLiveDataObserver<T>(lifecycleOwner) {
-        @Override void onValue(T data) {
-          downstream.onNext(data);
-        }
-      };
     }
 
     @Override public void onSubscribe(Subscription s) {
-      upstream = s;
-      downstream.onSubscribe(s);
+      EndConsumerHelper.setOnce(this.upstream, s, getClass());
+      downstream.onSubscribe(this);
     }
 
     @Override public void onNext(T data) {
-      liveDataObserver.onNext(data);
+      onLiveNext(data);
     }
 
     @Override public void onError(Throwable e) {
+      removeObservers(lifecycleOwner);
       downstream.onError(e);
     }
 
     @Override public void onComplete() {
+      removeObservers(lifecycleOwner);
       downstream.onComplete();
     }
 
     @Override public void request(long n) {
-      upstream.request(n);
+      upstream.get().request(n);
     }
 
     @Override public void cancel() {
-      upstream.cancel();
+      dispose();
+    }
+
+    @Override public void onChanged(T data) {
+      downstream.onNext(data);
+    }
+
+    @Override public final boolean isDisposed() {
+      return upstream.get() == SubscriptionHelper.CANCELLED;
+    }
+
+    @Override public final void dispose() {
+      removeObservers(lifecycleOwner);
+      SubscriptionHelper.cancel(upstream);
     }
   }
 }

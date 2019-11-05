@@ -1,6 +1,6 @@
 # RxLifeHelper
 
-### implementation 'com.yan:rxlifehelper:2.0.8'
+### implementation 'com.yan:rxlifehelper:2.0.9'
 bindUntil系列尽可能的保证在subscribe的上一个操作符设置
 
 ### demo
