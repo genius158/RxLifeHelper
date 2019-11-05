@@ -1,7 +1,7 @@
 # RxLifeHelper
 
 ### implementation 'com.yan:rxlifehelper:2.0.8'
-
+bindUntil系列尽可能的保证在subscribe的上一个操作符设置
 
 ### demo
 协程扩展函数：
