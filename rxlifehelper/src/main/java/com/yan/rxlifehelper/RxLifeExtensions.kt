@@ -1,5 +1,6 @@
 package com.yan.rxlifehelper
 
+import android.util.Log
 import android.view.View
 import androidx.lifecycle.Lifecycle.Event
 import androidx.lifecycle.Lifecycle.Event.ON_DESTROY
@@ -26,7 +27,8 @@ import kotlin.coroutines.resumeWithException
  */
 fun <T> View.launchUntilViewDetach(
     context: CoroutineContext = Dispatchers.Main, exHandler: ((Throwable) -> Unit)? = null,
-    loader: suspend CoroutineScope.() -> T): Job = innerLaunchUntilViewDetach(this,context, exHandler, loader)
+    loader: suspend CoroutineScope.() -> T): Job = innerLaunchUntilViewDetach(this, context,
+    exHandler, loader)
 
 
 /**
@@ -81,6 +83,8 @@ fun <T> LifecycleOwner.launchLiveUntil(
     wrapData(this, this@launchLiveUntil, event, deferred)
   }
   job.invokeOnCompletion {
+    Log.e("wrapData", "invokeOnCompletion invokeOnCompletion v " + it?.message)
+
     it?.let {
       it.printStackTrace()
       exHandler?.invoke(it)
@@ -96,11 +100,15 @@ private suspend fun <T> wrapData(scope: CoroutineScope, lifecycleOwner: Lifecycl
       continuation.invokeOnCancellation { exception ->
         if (!emmit.isDisposed && exception != null) emmit.onError(exception)
       }
-      scope.launch { emmit.onSuccess(deferred.await()) }
+      scope.launch {
+        emmit.onSuccess(deferred.await())
+      }
     }.compose(RxLifeHelper.bindLifeLiveOwnerUntilEvent(lifecycleOwner, event))
         .subscribe(object : SingleObserver<T> {
           override fun onSubscribe(d: Disposable) {}
-          override fun onError(e: Throwable) = continuation.resumeWithException(e)
+          override fun onError(e: Throwable) {
+            continuation.resumeWithException(e)
+          }
           override fun onSuccess(data: T) {
             if (!continuation.isCancelled) continuation.resume(data)
           }

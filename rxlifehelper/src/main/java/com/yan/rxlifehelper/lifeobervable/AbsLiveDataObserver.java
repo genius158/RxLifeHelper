@@ -2,6 +2,7 @@ package com.yan.rxlifehelper.lifeobervable;
 
 import android.os.Looper;
 import androidx.annotation.NonNull;
+import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
@@ -12,7 +13,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
  * @date 2019/11/3
  */
 abstract class AbsLiveDataObserver<T> extends LiveData<T> implements Observer<T> {
-  private boolean isActive = false;
+  private boolean isActive;
   private boolean isExecute = false;
   private T data;
 

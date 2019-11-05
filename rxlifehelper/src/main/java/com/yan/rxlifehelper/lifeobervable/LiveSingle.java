@@ -5,6 +5,7 @@ import io.reactivex.Single;
 import io.reactivex.SingleObserver;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.internal.disposables.DisposableHelper;
+import io.reactivex.observers.DisposableSingleObserver;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -60,7 +61,7 @@ public final class LiveSingle<T> extends Single<T> {
     }
 
     @Override public void onChanged(T data) {
-      removeObserver(this);
+      removeObservers(lifecycleOwner);
       downstream.onSuccess(data);
     }
   }

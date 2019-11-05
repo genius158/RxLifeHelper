@@ -194,13 +194,11 @@ public class RxLifeHelper {
     }
 
     @Override public void onStateChanged(LifecycleOwner source, final Lifecycle.Event event) {
+      mLifecycleRegistry.handleLifecycleEvent(event);
       lifecycleSubject.onNext(event);
-      if (mLifecycleRegistry.getObserverCount() > 0) {
-        mLifecycleRegistry.handleLifecycleEvent(event);
-      }
       if (event == Lifecycle.Event.ON_DESTROY) {
-        TAG_LIFECYCLE_MAP.remove(source.toString());
         source.getLifecycle().removeObserver(this);
+        TAG_LIFECYCLE_MAP.remove(source.toString());
         mLifecycleRegistry = null;
       }
     }
@@ -219,8 +217,8 @@ public class RxLifeHelper {
     }
 
     @Override public void onViewDetachedFromWindow(View v) {
-      lifecycleSubject.onNext(true);
       v.removeOnAttachStateChangeListener(this);
+      lifecycleSubject.onNext(true);
       v.setTag(R.id.tag_view_attach, null);
     }
   }
