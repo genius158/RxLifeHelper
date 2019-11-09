@@ -12,7 +12,7 @@ bindUntil系列尽可能的保证在subscribe的上一个操作符设置
 ```
      launchUntilEvent {
        // io代码
-       val data = reqeustData()
+       val data = suspendReqeustData()
        
        // 判断生命周期,保证生命周期resume的前提下继续执行
        resumeUntil()
