@@ -10,11 +10,9 @@ import io.reactivex.SingleObserver
 import io.reactivex.disposables.Disposable
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.CoroutineContext
@@ -26,22 +24,32 @@ import kotlin.coroutines.resumeWithException
  */
 fun <T> View.launchUntilViewDetach(
     context: CoroutineContext = Dispatchers.Main, exHandler: ((Throwable) -> Unit)? = null,
-    loader: suspend CoroutineScope.() -> T): Job = innerLaunchUntilViewDetach(this, context,
-    exHandler, loader)
-
+    loader: suspend CoroutineScope.() -> T): Job = innerLaunchUntil(context,
+    exHandler, RxLifeHelper.bindUntilViewDetach(this), loader)
 
 /**
  * 结合OnAttachStateChangeListener实现自动释放
  */
 fun <T> View.launchUntilDetach(
     context: CoroutineContext = Dispatchers.Main, exHandler: ((Throwable) -> Unit)? = null,
-    loader: suspend CoroutineScope.() -> T): Job = innerLaunchUntilViewDetach(rootView, context,
-    exHandler, loader)
+    loader: suspend CoroutineScope.() -> T): Job = innerLaunchUntil(context,
+    exHandler, RxLifeHelper.bindUntilViewDetach(rootView), loader)
 
-private fun <T> innerLaunchUntilViewDetach(view: View,
-    context: CoroutineContext = Dispatchers.Main, exHandler: ((Throwable) -> Unit)? = null,
+/**
+ * 结合LifecycleOwner 实现自动释放
+ */
+fun <T> LifecycleOwner.launchUntilEvent(
+    context: CoroutineContext = Dispatchers.Main,
+    event: Event = ON_DESTROY,
+    exHandler: ((Throwable) -> Unit)? = null,
+    loader: suspend CoroutineScope.() -> T): Job = innerLaunchUntil(context,
+    exHandler, RxLifeHelper.bindLifeOwnerUntilEvent(this, event), loader)
+
+
+private fun <T> innerLaunchUntil(context: CoroutineContext = Dispatchers.Main,
+    exHandler: ((Throwable) -> Unit)? = null,
+    transformer: LifecycleTransformer<Any>,
     loader: suspend CoroutineScope.() -> T): Job {
-
   var emitter: SingleEmitter<Any>? = null
   val handler = CoroutineExceptionHandler { _, _ -> }
   val job = GlobalScope.launch(handler + context) { loader() }
@@ -53,7 +61,7 @@ private fun <T> innerLaunchUntilViewDetach(view: View,
     if (emitter?.isDisposed == false) emitter?.onSuccess(1)
   }
 
-  Single.create<Any> { emitter = it }.compose(RxLifeHelper.bindUntilViewDetach<Any>(view))
+  Single.create<Any> { emitter = it }.compose(transformer)
       .subscribe(object : SingleObserver<Any> {
         override fun onSuccess(t: Any) {
           if (!job.isCancelled) job.cancel()
@@ -63,52 +71,24 @@ private fun <T> innerLaunchUntilViewDetach(view: View,
         override fun onError(e: Throwable) = onSuccess(1)
       })
   return job
-
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////
-
-/**
- * 结合lifecycle实现自动释放
- * call in where which implements LifecycleOwner like fragment or fragmentActivity
- */
-fun <T> LifecycleOwner.launchLiveUntil(
-    context: CoroutineContext = Dispatchers.Main, event: Event = ON_DESTROY,
-    exHandler: ((Throwable) -> Unit)? = null,
-    loader: suspend CoroutineScope.() -> T): Job {
-  val handler = CoroutineExceptionHandler { _, _ -> }
-  val job = GlobalScope.launch(handler + context) {
-    val deferred = async { loader() }
-    wrapData(this, this@launchLiveUntil, event, deferred)
-  }
-  job.invokeOnCompletion {
-    it?.let {
-      it.printStackTrace()
-      exHandler?.invoke(it)
-    }
-  }
-  return job
-}
-
-private suspend fun <T> wrapData(scope: CoroutineScope, lifecycleOwner: LifecycleOwner,
-    event: Event, deferred: Deferred<T>): T {
+suspend fun LifecycleOwner.resumeUntil(event: Event = ON_DESTROY): Boolean {
   return suspendCancellableCoroutine { continuation ->
-    Single.create<T> { emmit ->
+    Single.create<Boolean> { emmit ->
       continuation.invokeOnCancellation { exception ->
         if (!emmit.isDisposed && exception != null) emmit.onError(exception)
       }
-      scope.launch {
-        emmit.onSuccess(deferred.await())
-      }
-    }.compose(RxLifeHelper.bindLifeLiveOwnerUntilEvent(lifecycleOwner, event))
-        .subscribe(object : SingleObserver<T> {
+      emmit.onSuccess(true)
+    }.compose(RxLifeHelper.bindLifeLiveOwnerUntilEvent(this, event))
+        .subscribe(object : SingleObserver<Boolean> {
           override fun onSubscribe(d: Disposable) {}
           override fun onError(e: Throwable) {
             continuation.resumeWithException(e)
           }
 
-          override fun onSuccess(data: T) {
-            if (!continuation.isCancelled) continuation.resume(data)
+          override fun onSuccess(data: Boolean) {
+            if (!continuation.isCancelled) continuation.resume(true)
           }
         })
   }

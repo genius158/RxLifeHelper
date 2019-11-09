@@ -5,7 +5,6 @@ import io.reactivex.Single;
 import io.reactivex.SingleObserver;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.internal.disposables.DisposableHelper;
-import io.reactivex.observers.DisposableSingleObserver;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
