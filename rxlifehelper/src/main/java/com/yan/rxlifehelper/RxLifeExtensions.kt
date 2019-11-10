@@ -1,6 +1,7 @@
 package com.yan.rxlifehelper
 
 import android.view.View
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.Lifecycle.Event
 import androidx.lifecycle.Lifecycle.Event.ON_DESTROY
 import androidx.lifecycle.LifecycleOwner
@@ -75,21 +76,26 @@ private fun <T> innerLaunchUntil(context: CoroutineContext = Dispatchers.Main,
 
 suspend fun LifecycleOwner.resumeUntil(event: Event = ON_DESTROY): Boolean {
   return suspendCancellableCoroutine { continuation ->
-    Single.create<Boolean> { emmit ->
-      continuation.invokeOnCancellation { exception ->
-        if (!emmit.isDisposed && exception != null) emmit.onError(exception)
-      }
-      emmit.onSuccess(true)
-    }.compose(RxLifeHelper.bindLifeLiveOwnerUntilEvent(this, event))
-        .subscribe(object : SingleObserver<Boolean> {
-          override fun onSubscribe(d: Disposable) {}
-          override fun onError(e: Throwable) {
-            continuation.resumeWithException(e)
-          }
+    when {
+      lifecycle.currentState == Lifecycle.State.DESTROYED -> continuation.resumeWithException(
+          IllegalStateException("LifecycleOwner was destroyed"))
+      lifecycle.currentState == Lifecycle.State.RESUMED -> continuation.resume(true)
+      else -> Single.create<Boolean> { emmit ->
+        continuation.invokeOnCancellation { exception ->
+          if (!emmit.isDisposed && exception != null) emmit.onError(exception)
+        }
+        emmit.onSuccess(true)
+      }.compose(RxLifeHelper.bindLifeLiveOwnerUntilEvent(this, event))
+          .subscribe(object : SingleObserver<Boolean> {
+            override fun onSubscribe(d: Disposable) {}
+            override fun onError(e: Throwable) {
+              continuation.resumeWithException(e)
+            }
 
-          override fun onSuccess(data: Boolean) {
-            if (!continuation.isCancelled) continuation.resume(true)
-          }
-        })
+            override fun onSuccess(data: Boolean) {
+              if (!continuation.isCancelled) continuation.resume(true)
+            }
+          })
+    }
   }
 }
