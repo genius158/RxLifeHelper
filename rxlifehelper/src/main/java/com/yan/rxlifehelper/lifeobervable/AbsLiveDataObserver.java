@@ -2,7 +2,6 @@ package com.yan.rxlifehelper.lifeobervable;
 
 import android.os.Looper;
 import androidx.annotation.NonNull;
-import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;

@@ -114,7 +114,7 @@ public class RxLifeHelper {
       return bindErrorEvent(new NullPointerException("RxLifeHelper: lifecycle could not be null"));
     }
     if (lifecycleOwner.getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED) {
-      return bindErrorEvent(new NullPointerException("RxLifeHelper: lifecycle owner is destroy"));
+      return bindErrorEvent(new NullPointerException("RxLifeHelper: LifecycleOwner was destroyed"));
     }
     return RxLifecycle.bindUntilEvent(getLifeManager(lifecycleOwner).lifecycleSubject, event);
   }
@@ -153,7 +153,7 @@ public class RxLifeHelper {
       return bindErrorEvent(new NullPointerException("RxLifeHelper: lifecycle could not be null"));
     }
     if (lifecycleOwner.getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED) {
-      return bindErrorEvent(new NullPointerException("RxLifeHelper: lifecycle owner is destroy"));
+      return bindErrorEvent(new NullPointerException("RxLifeHelper: LifecycleOwner was destroyed"));
     }
     RxLifeHelper.InnerLifeCycleManager lifeCycleManager = getLifeManager(lifecycleOwner);
     return RxLifecycle.bindUntilEvent(lifeCycleManager, lifeCycleManager.lifecycleSubject, event);
