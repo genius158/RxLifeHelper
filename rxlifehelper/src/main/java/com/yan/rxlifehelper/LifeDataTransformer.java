@@ -41,7 +41,7 @@ class LifeDataTransformer<T> extends LifecycleTransformer<T> {
   }
 
   @Override public ObservableSource<T> apply(final Observable<T> upstream) {
-    return new LiveObservable<>(upstream, lifecycleOwner);
+    return new LiveObservable<>(upstream, lifecycleOwner).takeUntil(observable);
   }
 
   @Override public Publisher<T> apply(Flowable<T> upstream) {

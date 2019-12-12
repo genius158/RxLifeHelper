@@ -63,30 +63,10 @@ public class MainActivity extends AppCompatActivity {
     //
     //  }
     //});
-    final int[] num = new int[] { 0 };
-    Observable.interval(200, TimeUnit.MILLISECONDS)
-        .flatMap(new Function<Long, ObservableSource<?>>() {
-          @Override public ObservableSource<?> apply(Long aLong) throws Exception {
-            if (num[0]++ > 20) {
-             return Observable.error(new Exception("wewe"));
-            }
-            return Observable.just(num[0]);
-          }
-        })
-        .compose(RxLifeHelper.bindUntilLifeLiveEvent(this, Lifecycle.Event.ON_DESTROY))
-        .subscribe(new Consumer<Object>() {
-          @Override public void accept(Object o) throws Exception {
-            Log.e("onNext", "" + o);
-          }
-        }, new Consumer<Throwable>() {
-          @Override public void accept(Throwable throwable) throws Exception {
-            Log.e("onNext", "" + throwable.getMessage());
-          }
-        });
 
     // 1111111111111 将不会 被打印
-    getData("111111111111111111111111111111");
-    getData("222222222222222222222222222222");
+    //getData("111111111111111111111111111111");
+    //getData("222222222222222222222222222222");
 
     //for (int i = 0; i < 1; i++) {
     //  getSupportFragmentManager().beginTransaction()
@@ -131,5 +111,31 @@ public class MainActivity extends AppCompatActivity {
             Log.e("getData", "accept: " + throwable);
           }
         });
+  }
+
+  @Override protected void onDestroy() {
+    super.onDestroy();
+
+    final int[] num = new int[] { 0 };
+    Observable.interval(200, TimeUnit.MILLISECONDS)
+        .flatMap(new Function<Long, ObservableSource<?>>() {
+          @Override public ObservableSource<?> apply(Long aLong) throws Exception {
+            if (num[0]++ > 20) {
+              return Observable.error(new Exception("wewe"));
+            }
+            return Observable.just(num[0]);
+          }
+        })
+        .compose(RxLifeHelper.bindUntilLifeLiveEvent(this, Lifecycle.Event.ON_DESTROY))
+        .subscribe(new Consumer<Object>() {
+          @Override public void accept(Object o) throws Exception {
+            Log.e("onNext", "" + o);
+          }
+        }, new Consumer<Throwable>() {
+          @Override public void accept(Throwable throwable) throws Exception {
+            Log.e("onNext", "" + throwable.getMessage());
+          }
+        });
+
   }
 }
