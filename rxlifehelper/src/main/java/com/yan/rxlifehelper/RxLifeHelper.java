@@ -2,6 +2,7 @@ package com.yan.rxlifehelper;
 
 import android.app.Activity;
 import android.content.Context;
+import android.util.Log;
 import android.view.View;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
@@ -25,6 +26,7 @@ import java.util.HashMap;
  * @author yanxianwei
  */
 public class RxLifeHelper {
+  public static boolean withLog = false;
   private static volatile HashMap<String, InnerLifeCycleManager> TAG_LIFECYCLE_MAP =
       new HashMap<>();
 
@@ -194,6 +196,9 @@ public class RxLifeHelper {
     }
 
     @Override public void onStateChanged(LifecycleOwner source, final Lifecycle.Event event) {
+      if (withLog){
+        Log.e("RxLifeHelper",source+"  "+event);
+      }
       mLifecycleRegistry.handleLifecycleEvent(event);
       lifecycleSubject.onNext(event);
       if (event == Lifecycle.Event.ON_DESTROY) {

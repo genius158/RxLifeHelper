@@ -1,11 +1,14 @@
 package com.yan.rxlifehelper.lifeobervable;
 
+import android.util.Log;
 import androidx.lifecycle.LifecycleOwner;
 import io.reactivex.Single;
 import io.reactivex.SingleObserver;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.internal.disposables.DisposableHelper;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static com.yan.rxlifehelper.RxLifeHelper.withLog;
 
 /**
  * @author genius
@@ -46,6 +49,9 @@ public final class LiveSingle<T> extends Single<T> {
     }
 
     @Override public void onError(Throwable e) {
+      if (withLog) {
+        Log.e("RxLifeHelper", e + "  " + lifecycleOwner);
+      }
       removeObservers(lifecycleOwner);
       downstream.onError(e);
     }
