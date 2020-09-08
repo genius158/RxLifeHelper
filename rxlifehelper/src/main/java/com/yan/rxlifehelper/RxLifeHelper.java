@@ -27,7 +27,7 @@ import java.util.HashMap;
  */
 public class RxLifeHelper {
   public static boolean withLog = false;
-  private static volatile HashMap<String, InnerLifeCycleManager> TAG_LIFECYCLE_MAP =
+  private static volatile HashMap<LifecycleOwner, InnerLifeCycleManager> TAG_LIFECYCLE_MAP =
       new HashMap<>();
 
   /**
@@ -167,15 +167,14 @@ public class RxLifeHelper {
   }
 
   static InnerLifeCycleManager getLifeManager(@NonNull LifecycleOwner lifecycleOwner) {
-    String key = lifecycleOwner.toString();
-    InnerLifeCycleManager lifeCycleManager = TAG_LIFECYCLE_MAP.get(key);
+    InnerLifeCycleManager lifeCycleManager = TAG_LIFECYCLE_MAP.get(lifecycleOwner);
     if (lifeCycleManager == null) {
-      synchronized (key.intern()) {
-        lifeCycleManager = TAG_LIFECYCLE_MAP.get(key);
+      synchronized (lifecycleOwner) {
+        lifeCycleManager = TAG_LIFECYCLE_MAP.get(lifecycleOwner);
         if (lifeCycleManager == null) {
           lifeCycleManager = new InnerLifeCycleManager(lifecycleOwner);
           lifecycleOwner.getLifecycle().addObserver(lifeCycleManager);
-          TAG_LIFECYCLE_MAP.put(key, lifeCycleManager);
+          TAG_LIFECYCLE_MAP.put(lifecycleOwner, lifeCycleManager);
         }
       }
     }
@@ -203,7 +202,7 @@ public class RxLifeHelper {
       lifecycleSubject.onNext(event);
       if (event == Lifecycle.Event.ON_DESTROY) {
         source.getLifecycle().removeObserver(this);
-        TAG_LIFECYCLE_MAP.remove(source.toString());
+        TAG_LIFECYCLE_MAP.remove(source);
         mLifecycleRegistry = null;
       }
     }
