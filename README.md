@@ -1,6 +1,6 @@
 # RxLifeHelper
 
-### implementation 'com.yan:rxlifehelper:2.3.0'
+### implementation 'com.yan:rxlifehelper:2.3.1'
 bindUntil系列尽可能的保证在subscribe的上一个操作符设置
 
 ### demo
@@ -44,3 +44,4 @@ version 1.2.6: 添加bindUntilActivityDetach(rootView 的 OnAttachStateChangeLis
 <br/> version 2.0.8: 增加协程扩展函数View.launchUntilViewDetach
 <br/> version 2.2.5: 增加协程扩展函数 LifecycleOwner.launchUntilEvent 在配合生命周期的前提下 resumeUntil 配合LiveData
 <br/> version 2.3.0: TAG_LIFECYCLE_MAP key 改为 观察对象，toString不能保证一直相同
+<br/> version 2.3.1: com.yan.rxlifehelper.RxLifeHelper.bindUntilDetach(android.view.View),取消 强制 rootView

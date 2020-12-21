@@ -2,10 +2,12 @@ package com.yan.rxlifehelper;
 
 import android.app.Activity;
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
 import android.view.View;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.Lifecycle;
@@ -77,7 +79,7 @@ public class RxLifeHelper {
   }
 
   @MainThread public static <T> LifecycleTransformer<T> bindUntilDetach(final View view) {
-    return bindUntilViewDetach(view.getRootView());
+    return bindUntilViewDetach(view);
   }
 
   @MainThread public static <T> LifecycleTransformer<T> bindUntilDetach(final Activity activity) {
